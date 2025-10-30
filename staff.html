@@ -8,50 +8,53 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="assets/css/style.css"/>
   <style>
-    .section-card { border-radius:12px; padding:18px; background:#fff; box-shadow:0 6px 18px rgba(2,6,23,0.04); }
-    .user-avatar { width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:var(--accent);font-weight:700; }
+    .section-card{border-radius:12px;padding:18px;background:#fff;box-shadow:0 6px 18px rgba(2,6,23,0.04);}
+    .user-avatar{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:var(--accent);font-weight:700;}
+    .small-muted{color:#6b7280;}
   </style>
-  <!-- add near top of each page (once) -->
-<script>
-  // config.js (global)
-  // Production backend URL (use your render backend URL). For local dev replace accordingly.
-  window.HMS = window.HMS || {};
-  // Use absolute backend URL in production:
-  window.HMS.API_BASE = window.HMS.API_BASE || 'https://hms-backend-yqjj.onrender.com/api';
 
-  // authFetch will be used by all pages to attach token & handle JSON
-  window.HMS.authFetch = async function(path, opts = {}) {
-    const base = window.HMS.API_BASE.replace(/\/$/,'');
-    const url = path.startsWith('http') ? path : `${base}/${path.replace(/^\/+/,'')}`;
-    const token = localStorage.getItem('hms_token');
-    const defaultHeaders = {'Content-Type':'application/json'};
-    opts.headers = Object.assign(defaultHeaders, opts.headers || {});
-    if (token) opts.headers['Authorization'] = 'Bearer ' + token;
-    const res = await fetch(url, opts);
-    const text = await res.text().catch(()=>null);
-    let body = null;
-    try { body = text ? JSON.parse(text) : null; } catch(e) { body = text; }
-    if (!res.ok) {
-      const err = new Error(body && (body.error || body.message) ? (body.error || body.message) : res.statusText);
-      err.status = res.status; err.body = body;
-      throw err;
-    }
-    return body;
-  };
-</script>
-
+  <script>
+    window.HMS = window.HMS || {};
+    window.HMS.API_BASE = window.HMS.API_BASE || 'https://hms-backend-yqjj.onrender.com/api';
+    window.HMS.authFetch = window.HMS.authFetch || (async function(path, opts = {}){
+      const base = window.HMS.API_BASE.replace(/\/$/,'');
+      const url = path.match(/^https?:\/\//) ? path : (base + '/' + path.replace(/^\/+/,''));
+      const token = localStorage.getItem('hms_token');
+      const headers = Object.assign({'Content-Type':'application/json'}, opts.headers || {});
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      const res = await fetch(url, Object.assign({}, opts, { headers }));
+      const txt = await res.text().catch(()=>null);
+      let body = null;
+      try { body = txt ? JSON.parse(txt) : null; } catch(e) { body = txt; }
+      if (!res.ok) { const err = new Error(body && (body.error || body.message) ? (body.error || body.message) : res.statusText); err.status = res.status; err.body = body; throw err; }
+      return body;
+    });
+  </script>
 </head>
 <body>
   <nav class="navbar navbar-expand-lg">
     <div class="container">
       <a class="navbar-brand" href="index.html">HMS</a>
-      <div class="d-flex align-items-center gap-3 ms-auto" id="userArea"></div>
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+          <li class="nav-item"><a class="nav-link" href="register.html">Sign up</a></li>
+          <li class="nav-item"><a class="nav-link" href="patients.html">Patients</a></li>
+          <li class="nav-item"><a class="nav-link" href="doctors.html">Doctors</a></li>
+          <li class="nav-item"><a class="nav-link" href="admin.html">Admin</a></li>
+        </ul>
+        <div class="d-flex align-items-center ms-auto" id="navUserPill"></div>
+      </div>
     </div>
   </nav>
 
   <main class="container mt-4 mb-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <div><h4>Staff Directory</h4><div class="small-muted">Add, view, and manage hospital staff</div></div>
+      <div>
+        <h4 class="mb-0">Staff Directory</h4>
+        <div class="small-muted">Add, view, and manage hospital staff</div>
+      </div>
       <div><button id="refreshStaff" class="btn btn-outline-secondary btn-sm">Refresh</button></div>
     </div>
 
@@ -89,17 +92,39 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     document.getElementById('yearStaff').textContent = new Date().getFullYear();
-    const API_BASE = '/api';
 
-    function showUserArea(){ const ua=document.getElementById('userArea'); const raw=localStorage.getItem('hms_user'); if(!raw){ ua.innerHTML='<a class="btn btn-sm btn-outline-primary" href="login.html">Login</a>'; return;} const u=JSON.parse(raw); ua.innerHTML=`<div class="d-flex align-items-center" style="gap:.5rem"><div class="user-avatar">${(u.name||u.email||'U').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}</div><div><div style="font-weight:600">${u.name||u.email}</div><div class="small-muted" style="font-size:.8rem">Signed in</div></div></div>`;}
-    function authFetch(path, opts={}){ const url = path.startsWith('http')?path:API_BASE.replace(/\/$/,'')+'/'+path.replace(/^\/+/,''); const headers=Object.assign({'Content-Type':'application/json'}, opts.headers||{}); const token=localStorage.getItem('hms_token'); if(token) headers['Authorization']='Bearer '+token; return fetch(url, Object.assign({}, opts, { headers })).then(async res=>{ const t=await res.text().catch(()=>null); try{ const body = t?JSON.parse(t):null; if(!res.ok){ const e = new Error(body && (body.error||body.message)?(body.error||body.message):res.statusText); e.status=res.status; e.body=body; throw e;} return body;}catch(e){ throw e; } });}
+    // populate nav user
+    (function(){
+      const el = document.getElementById('navUserPill');
+      const raw = localStorage.getItem('hms_user');
+      if(!raw){ el.innerHTML = '<a class="btn btn-sm btn-outline-primary" href="login.html">Login</a>'; return; }
+      try {
+        const u = JSON.parse(raw);
+        el.innerHTML = `<div class="dropdown">
+          <a class="dropdown-toggle d-flex align-items-center text-decoration-none" id="userDrop" data-bs-toggle="dropdown" href="#">
+            <div style="width:36px;height:36px;border-radius:50%;background:#eef2ff;display:inline-flex;align-items:center;justify-content:center;margin-right:.6rem;font-weight:700;">
+              ${(u.name||u.email||'U').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}
+            </div>
+            <span style="font-weight:600">${u.name||u.email}</span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDrop">
+            <li><a class="dropdown-item" href="#" id="viewProfileLink">Edit profile</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="#" id="signOutLink">Sign out</a></li>
+          </ul>
+        </div>`;
+        document.getElementById('signOutLink').addEventListener('click', (e)=>{ e.preventDefault(); localStorage.removeItem('hms_token'); localStorage.removeItem('hms_user'); window.location.href='index.html'; });
+        document.getElementById('viewProfileLink').addEventListener('click', (e)=>{ e.preventDefault(); const role = (JSON.parse(raw).role||'').toLowerCase(); if(role.includes('doctor')) window.location.href='doctors.html#edit'; else if(role.includes('patient')) window.location.href='patients.html#edit'; else window.location.href='admin.html#edit'; });
+      } catch(e){ el.innerHTML = '<a class="btn btn-sm btn-outline-primary" href="login.html">Login</a>'; }
+    })();
 
+    const authFetch = window.HMS.authFetch;
     const staffTableBody = document.getElementById('staffTable').querySelector('tbody');
 
     async function loadStaff(){
       staffTableBody.innerHTML = '<tr><td colspan="5" class="small-muted">Loading...</td></tr>';
       try {
-        const staff = await authFetch('/staff').catch(()=>[]);
+        const staff = await authFetch('/staff');
         if(!staff || staff.length===0){ staffTableBody.innerHTML = '<tr><td colspan="5" class="small-muted">No staff found</td></tr>'; return; }
         staffTableBody.innerHTML = staff.map(s => `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.role)}</td><td>${escapeHtml(s.department||'')}</td><td>${escapeHtml(s.phone||'')}</td><td><button class="btn btn-sm btn-outline-danger delStaff" data-id="${s.id}">Delete</button></td></tr>`).join('');
       } catch(e){ staffTableBody.innerHTML = '<tr><td colspan="5" class="small-muted">Failed to load</td></tr>'; console.error(e); }
@@ -107,28 +132,26 @@
 
     document.getElementById('addStaffForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      const btn = document.getElementById('addStaffBtn');
-      btn.disabled = true; btn.textContent = 'Adding...';
+      const btn = document.getElementById('addStaffBtn'); btn.disabled = true; btn.textContent = 'Adding...';
       try {
         const payload = { name: document.getElementById('staffName').value.trim(), email: document.getElementById('staffEmail').value.trim(), phone: document.getElementById('staffPhone').value.trim(), role: document.getElementById('staffRole').value.trim(), department: document.getElementById('staffDept').value.trim() };
         await authFetch('/staff', { method: 'POST', body: JSON.stringify(payload) });
-        await loadStaff();
-        document.getElementById('addStaffForm').reset();
+        await loadStaff(); document.getElementById('addStaffForm').reset();
       } catch(e){ alert('Add failed'); console.error(e); }
       btn.disabled = false; btn.textContent = 'Add Staff';
     });
 
     document.body.addEventListener('click', async (ev) => {
-      const d = ev.target.closest('.delStaff'); if (!d) return;
-      if (!confirm('Delete staff?')) return;
+      const d = ev.target.closest('.delStaff'); if(!d) return;
+      if(!confirm('Delete staff?')) return;
       try { await authFetch('/staff/' + d.dataset.id, { method: 'DELETE' }); await loadStaff(); } catch(e){ alert('Delete failed'); console.error(e); }
     });
 
-    function escapeHtml(s){ if(!s && s!==0) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function escapeHtml(s){ if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     document.getElementById('refreshStaff').addEventListener('click', loadStaff);
 
-    showUserArea();
+    // init
     loadStaff();
   </script>
 </body>
