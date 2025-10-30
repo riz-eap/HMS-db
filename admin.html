@@ -3,584 +3,173 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>HMS — Admin Dashboard</title>
+  <title>Admin — Hospital Management System</title>
 
-  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
-
-  <!-- Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
-
+  <link rel="stylesheet" href="assets/css/style.css" />
   <style>
-    :root{
-      --accent:#3b82f6;
-      --muted:#6c757d;
-      --card-bg:#fff;
-      --glass: rgba(255,255,255,0.6);
-    }
-    body{background:#f1f5f9;font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;margin:0}
-    .sidebar{
-      min-width:240px;
-      max-width:260px;
-      background:linear-gradient(180deg,#fff,#f8fafc);
-      border-right:1px solid rgba(0,0,0,0.04);
-      height:100vh;
-      position:fixed;
-      top:0;left:0;padding:1.2rem;overflow:auto;
-    }
-    .sidebar .brand{font-weight:700;color:var(--accent);font-size:1.15rem}
-    .sidebar .nav-link{color:#374151;border-radius:8px;padding:.55rem .75rem}
-    .sidebar .nav-link.active{background:linear-gradient(90deg,rgba(59,130,246,0.08),rgba(59,130,246,0.03));color:var(--accent)}
-    main.content{margin-left:270px;padding:1.6rem}
-    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
-    .stat-card{border-radius:12px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:0 6px 18px rgba(15,23,42,0.04);padding:1rem}
-    .table-card{border-radius:12px;background:var(--card-bg);box-shadow:0 6px 20px rgba(15,23,42,0.04);padding:0;overflow:hidden}
-    .table-card .card-body{padding:1rem}
-    .search-input{max-width:420px}
-    .small-muted{color:var(--muted);font-size:.9rem}
-    .badge-role-admin{background:#fce7f3;color:#9b1238;padding:.35rem .6rem;border-radius:.45rem}
-    .badge-role-doctor{background:#e6fffa;color:#0f766e;padding:.35rem .6rem;border-radius:.45rem}
-    .badge-role-patient{background:#fef3c7;color:#92400e;padding:.35rem .6rem;border-radius:.45rem}
-    @media (max-width: 991px){
-      .sidebar{position:relative;height:auto;width:100%;display:flex;gap:.5rem;overflow-x:auto}
-      main.content{margin-left:0;padding:1rem}
-    }
-    .modal-wide{max-width:980px}
-    .table-responsive{max-height:520px;overflow:auto}
-    .action-btn{border-radius:8px}
-    /* small helper */
-    .muted-small{color:#6b7280;font-size:.9rem}
+    .user-pill { display:flex; align-items:center; gap:.6rem; }
+    .user-avatar { width:40px; height:40px; border-radius:50%; background:#eef2ff; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:var(--accent); }
+    .section-card { border-radius:12px; padding:18px; background:#fff; box-shadow:0 6px 18px rgba(2,6,23,0.04); }
+    .small-muted { color:#6b7280; }
   </style>
 </head>
 <body>
+  <nav class="navbar navbar-expand-lg">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">HMS</a>
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="mb-4">
-      <div class="brand d-flex align-items-center gap-2">
-        <i class="bi bi-hospital-fill fs-4" style="color:var(--accent)"></i>
-        <span>HMS Admin</span>
-      </div>
-      <div class="small-muted mt-1">Control panel • Manage data</div>
-    </div>
-
-    <nav class="nav flex-column" aria-label="Main navigation">
-      <a class="nav-link active d-flex align-items-center gap-2" href="#overview" data-tab="overview"><i class="bi bi-speedometer2"></i> Overview</a>
-      <a class="nav-link d-flex align-items-center gap-2" href="#users" data-tab="users"><i class="bi bi-people-fill"></i> Users</a>
-      <a class="nav-link d-flex align-items-center gap-2" href="#doctors" data-tab="doctors"><i class="bi bi-person-badge-fill"></i> Doctors</a>
-      <a class="nav-link d-flex align-items-center gap-2" href="#patients" data-tab="patients"><i class="bi bi-person-lines-fill"></i> Patients</a>
-      <a class="nav-link d-flex align-items-center gap-2" href="#appointments" data-tab="appointments"><i class="bi bi-calendar-check-fill"></i> Appointments</a>
-      <hr/>
-      <a class="nav-link text-danger d-flex align-items-center gap-2" id="logoutBtnSide" href="#"><i class="bi bi-box-arrow-right"></i> Logout</a>
-    </nav>
-
-    <div class="mt-4 small text-muted">
-      <div>Environment: <strong id="envName">Production</strong></div>
-      <div class="mt-2">DB: <small id="dbStatus">Connecting...</small></div>
-    </div>
-  </aside>
-
-  <!-- MAIN -->
-  <main class="content">
-    <div class="topbar">
-      <div>
-        <h3 class="mb-0">Admin Dashboard</h3>
-        <div class="small-muted">Overview and management tools</div>
-      </div>
-
-      <div class="d-flex align-items-center gap-2">
-        <input id="globalSearch" class="form-control form-control-sm search-input" placeholder="Search users, patients, doctors..." />
-        <button id="refreshAll" class="btn btn-outline-secondary btn-sm">Refresh</button>
+      <div class="d-flex align-items-center gap-3 ms-auto">
+        <!-- admin dropdown -->
         <div class="dropdown">
-          <button class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown">Actions</button>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" id="exportAllCSV" href="#">Export All CSV</a></li>
-            <li><a class="dropdown-item" id="clearCache" href="#">Clear local cache</a></li>
+          <a class="d-flex align-items-center text-decoration-none dropdown-toggle" id="adminDropdown" data-bs-toggle="dropdown" href="#" aria-expanded="false" style="gap:.6rem;">
+            <div id="adminAvatar" class="user-avatar"></div>
+            <div id="adminName" style="font-weight:600"></div>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown">
+            <li><a class="dropdown-item" href="#" id="adminEditProfile">Edit profile</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="#" id="adminSignOut">Sign out</a></li>
           </ul>
         </div>
       </div>
     </div>
+  </nav>
 
-    <!-- STATS -->
-    <div class="row g-3 mb-3">
-      <div class="col-md-3"><div class="stat-card p-3"><div class="d-flex justify-content-between"><div><div class="small-muted">Total Users</div><div class="h4 mb-0" id="statUsers">—</div></div><i class="bi bi-people-fill fs-2 text-muted"></i></div></div></div>
-      <div class="col-md-3"><div class="stat-card p-3"><div class="d-flex justify-content-between"><div><div class="small-muted">Doctors</div><div class="h4 mb-0" id="statDoctors">—</div></div><i class="bi bi-person-badge fs-2 text-muted"></i></div></div></div>
-      <div class="col-md-3"><div class="stat-card p-3"><div class="d-flex justify-content-between"><div><div class="small-muted">Patients</div><div class="h4 mb-0" id="statPatients">—</div></div><i class="bi bi-person-lines-fill fs-2 text-muted"></i></div></div></div>
-      <div class="col-md-3"><div class="stat-card p-3"><div class="d-flex justify-content-between"><div><div class="small-muted">Appointments</div><div class="h4 mb-0" id="statAppointments">—</div></div><i class="bi bi-calendar-check-fill fs-2 text-muted"></i></div></div></div>
-    </div>
+  <main class="container mt-4 mb-5">
+    <div id="adminContent" style="display:none;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h3 class="mb-0">Admin Panel</h3>
+          <div class="small-muted">Manage users, doctors, appointments and system settings</div>
+        </div>
+      </div>
 
-    <!-- TABS -->
-    <div class="card table-card mb-4">
-      <div class="card-body">
-        <ul class="nav nav-pills mb-3" id="adminTabs" role="tablist">
-          <li class="nav-item"><button class="nav-link active" data-target="usersPane">Users</button></li>
-          <li class="nav-item"><button class="nav-link" data-target="doctorsPane">Doctors</button></li>
-          <li class="nav-item"><button class="nav-link" data-target="patientsPane">Patients</button></li>
-          <li class="nav-item"><button class="nav-link" data-target="appointmentsPane">Appointments</button></li>
-        </ul>
+      <div class="row g-4">
+        <div class="col-lg-3">
+          <div class="section-card">
+            <h6>Quick actions</h6>
+            <div class="d-grid mt-2">
+              <a class="btn btn-outline-primary btn-sm" id="manageUsersBtn" href="#">Manage Users</a>
+              <a class="btn btn-outline-secondary btn-sm mt-2" id="manageDoctorsBtn" href="#">Manage Doctors</a>
+              <a class="btn btn-outline-success btn-sm mt-2" id="manageAppointmentsBtn" href="#">Appointments</a>
+              <a class="btn btn-outline-info btn-sm mt-2" id="manageBillingBtn" href="#">Billing</a>
+            </div>
+          </div>
+        </div>
 
-        <div id="tabContents">
-          <!-- USERS -->
-          <section id="usersPane" class="tab-pane show active">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <div class="small-muted">Manage all registered users.</div>
-              <div class="d-flex gap-2">
-                <input id="usersFilter" class="form-control form-control-sm" placeholder="Filter by email or name"/>
-                <button id="usersExport" class="btn btn-sm btn-outline-secondary">Export CSV</button>
-                <button id="addUserBtn" class="btn btn-sm btn-primary">Add User</button>
+        <div class="col-lg-9">
+          <div class="section-card">
+            <h6>Overview</h6>
+            <div id="overview" class="mt-2">
+              <div class="row">
+                <div class="col-md-3"><div class="p-3"><strong id="statUsers">—</strong><div class="small-muted">Users</div></div></div>
+                <div class="col-md-3"><div class="p-3"><strong id="statDoctors">—</strong><div class="small-muted">Doctors</div></div></div>
+                <div class="col-md-3"><div class="p-3"><strong id="statAppointments">—</strong><div class="small-muted">Appointments</div></div></div>
+                <div class="col-md-3"><div class="p-3"><strong id="statBilling">—</strong><div class="small-muted">Bills</div></div></div>
               </div>
             </div>
-            <div class="table-responsive">
-              <table class="table table-hover table-sm align-middle" id="usersTable">
-                <thead class="table-light"><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead>
-                <tbody></tbody>
-              </table>
+            <div id="adminMain" class="mt-3">
+              <!-- render admin tables/forms here -->
+              <div class="small-muted">Select an action on the left to manage entities.</div>
             </div>
-          </section>
-
-          <!-- DOCTORS -->
-          <section id="doctorsPane" class="tab-pane" style="display:none">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <div class="small-muted">Doctors directory and schedules.</div>
-              <div class="d-flex gap-2">
-                <input id="doctorsFilter" class="form-control form-control-sm" placeholder="Filter by name or specialty"/>
-                <button id="doctorsExport" class="btn btn-sm btn-outline-secondary">Export CSV</button>
-                <button id="addDoctorBtn" class="btn btn-sm btn-primary">Add Doctor</button>
-              </div>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-hover table-sm align-middle" id="doctorsTable">
-                <thead class="table-light"><tr><th>ID</th><th>Name</th><th>Specialty</th><th>Phone</th><th>Created</th><th>Actions</th></tr></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
-
-          <!-- PATIENTS -->
-          <section id="patientsPane" class="tab-pane" style="display:none">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <div class="small-muted">Patient records and contact info.</div>
-              <div class="d-flex gap-2">
-                <input id="patientsFilter" class="form-control form-control-sm" placeholder="Filter by name or phone"/>
-                <button id="patientsExport" class="btn btn-sm btn-outline-secondary">Export CSV</button>
-                <button id="addPatientBtnMobile" class="btn btn-sm btn-primary">Add Patient</button>
-              </div>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-hover table-sm align-middle" id="patientsTable">
-                <thead class="table-light"><tr><th>ID</th><th>Name</th><th>Age</th><th>Phone</th><th>Created</th><th>Actions</th></tr></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
-
-          <!-- APPOINTMENTS -->
-          <section id="appointmentsPane" class="tab-pane" style="display:none">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <div class="small-muted">Appointments schedule and status.</div>
-              <div class="d-flex gap-2">
-                <select id="apptStatusFilter" class="form-select form-select-sm">
-                  <option value="">All status</option>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-                <button id="apptsExport" class="btn btn-sm btn-outline-secondary">Export CSV</button>
-                <button id="addApptBtn" class="btn btn-sm btn-primary">Add Appointment</button>
-              </div>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-hover table-sm align-middle" id="appointmentsTable">
-                <thead class="table-light"><tr><th>ID</th><th>Patient</th><th>Doctor</th><th>Date / Time</th><th>Status</th><th>Actions</th></tr></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
+          </div>
         </div>
       </div>
     </div>
 
+    <div id="adminBlocked" class="text-center mt-5" style="display:none;">
+      <h5>Access denied</h5>
+      <p class="small-muted">You must be signed in as an administrator to access this page. <a href="admin-login.html">Sign in as admin</a></p>
+    </div>
   </main>
 
-  <!-- VIEW / EDIT MODALS -->
-  <div class="modal fade" id="viewModal" tabindex="-1"><div class="modal-dialog modal-wide modal-dialog-centered"><div class="modal-content">
-    <div class="modal-header"><h5 id="viewModalTitle" class="modal-title">View</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body" id="viewModalBody"></div>
-    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
-  </div></div></div>
+  <footer class="site-footer"><div class="container">© <span id="yearAdmin"> </span> HMS</div></footer>
 
-  <div class="modal fade" id="editModal" tabindex="-1"><div class="modal-dialog modal-wide modal-dialog-centered"><div class="modal-content">
-    <div class="modal-header"><h5 id="editModalTitle" class="modal-title">Edit</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-      <form id="editForm"></form>
-    </div>
-    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button id="saveEditBtn" class="btn btn-primary">Save</button></div>
-  </div></div></div>
-
-  <!-- Bootstrap JS bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-  <!-- Admin JS -->
   <script>
-  (function () {
-    // ---------- CONFIG ----------
-    // Set your backend API base URL here:
-    const API_BASE = "https://hms-backend-yqjj.onrender.com/api"; // ← REPLACE if different
+    document.getElementById('yearAdmin').textContent = new Date().getFullYear();
+    const API_BASE = "https://hms-backend-yqjj.onrender.com/api"; // adjust if needed
 
-    // ---------- STATE ----------
-    const state = { users: [], doctors: [], patients: [], appointments: [] };
-
-    // ---------- HELPERS ----------
-    function el(sel) { return document.querySelector(sel); }
-    function els(sel) { return Array.from(document.querySelectorAll(sel)); }
-    function escapeHtml(s) { if (s === null || s === undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-    function formatDate(d) { if(!d) return ''; const x = new Date(d); return isNaN(x) ? '' : x.toLocaleString(); }
-    // safe showToast (replace the old one)
-function showToast(msg, cls) {
-  try {
-    const t = document.createElement('div');
-    t.className = 'toast align-items-center show';
-    t.style.position = 'fixed';
-    t.style.right = '18px';
-    t.style.top = (18 + document.querySelectorAll('.toast').length * 56) + 'px';
-    t.style.zIndex = 9999;
-    // create inner structure without any escaped quotes
-    const inner = document.createElement('div');
-    inner.className = 'd-flex';
-    const body = document.createElement('div');
-    body.className = 'toast-body';
-    body.textContent = msg;
-    const btn = document.createElement('button');
-    btn.className = 'btn-close me-2 m-auto';
-    btn.type = 'button';
-    btn.addEventListener('click', function () { t.remove(); });
-    inner.appendChild(body);
-    inner.appendChild(btn);
-    t.appendChild(inner);
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 3800);
-    return t;
-  } catch (e) {
-    // fallback: console and alert
-    console.error('toast error', e);
-    alert(msg);
-  }
-}
-
-    function download(filename, text) {
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'text/csv'})); a.download = filename; document.body.appendChild(a); a.click(); a.remove();
-    }
-
-    // ---------- API ----------
-    async function api(path, opts = {}) {
-      const url = API_BASE + path;
+    function authFetch(path, opts = {}) {
+      const url = path.startsWith('http') ? path : API_BASE.replace(/\/$/,'') + '/' + path.replace(/^\/+/,'');
+      const token = localStorage.getItem('hms_token');
       const headers = Object.assign({'Content-Type':'application/json'}, opts.headers || {});
-      const token = localStorage.getItem('hms_token'); if (token) headers.Authorization = 'Bearer ' + token;
-      const res = await fetch(url, Object.assign({ method: 'GET', headers }, opts));
-      if (!res.ok) {
-        const txt = await res.text().catch(()=>null);
-        throw new Error(txt || res.statusText || 'API error');
-      }
-      if (res.status === 204) return null;
-      const text = await res.text().catch(()=>null);
-      try { return text ? JSON.parse(text) : null; } catch(e) { return text; }
-    }
-
-    // ---------- RENDER TABLES ----------
-    function roleBadge(role) {
-      if(!role) return '<span class="badge bg-secondary">—</span>';
-      if(role==='admin') return '<span class="badge badge-role-admin">Admin</span>';
-      if(role==='doctor') return '<span class="badge badge-role-doctor">Doctor</span>';
-      if(role==='patient') return '<span class="badge badge-role-patient">Patient</span>';
-      return '<span class="badge bg-light text-dark">'+escapeHtml(role)+'</span>';
-    }
-
-    function buildUsers() {
-      const tbody = el('#usersTable tbody'); tbody.innerHTML = '';
-      (state.users || []).forEach(u => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${u.id||''}</td><td>${escapeHtml(u.name||'')}</td><td>${escapeHtml(u.email||'')}</td><td>${roleBadge(u.role)}</td><td>${formatDate(u.created_at||u.createdAt)}</td>
-          <td>
-            <div class="btn-group">
-              <button class="btn btn-sm btn-outline-secondary action-btn" data-id="${u.id}" data-type="user" data-action="view">View</button>
-              <button class="btn btn-sm btn-outline-primary action-btn" data-id="${u.id}" data-type="user" data-action="edit">Edit</button>
-              <button class="btn btn-sm btn-outline-danger action-btn" data-id="${u.id}" data-type="user" data-action="delete">Delete</button>
-            </div>
-          </td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function buildDoctors() {
-      const tbody = el('#doctorsTable tbody'); tbody.innerHTML = '';
-      (state.doctors || []).forEach(d => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${d.id||''}</td><td>${escapeHtml(d.name||'')}</td><td>${escapeHtml(d.specialty||'')}</td><td>${escapeHtml(d.phone||'')}</td><td>${formatDate(d.created_at||d.createdAt)}</td>
-          <td>
-            <div class="btn-group">
-              <button class="btn btn-sm btn-outline-secondary action-btn" data-id="${d.id}" data-type="doctor" data-action="view">View</button>
-              <button class="btn btn-sm btn-outline-primary action-btn" data-id="${d.id}" data-type="doctor" data-action="edit">Edit</button>
-              <button class="btn btn-sm btn-outline-danger action-btn" data-id="${d.id}" data-type="doctor" data-action="delete">Delete</button>
-            </div>
-          </td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function buildPatients() {
-      const tbody = el('#patientsTable tbody'); tbody.innerHTML = '';
-      (state.patients || []).forEach(p => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${p.id||''}</td><td>${escapeHtml(p.name||'')}</td><td>${p.age||''}</td><td>${escapeHtml(p.phone||'')}</td><td>${formatDate(p.created_at||p.createdAt)}</td>
-          <td>
-            <div class="btn-group">
-              <button class="btn btn-sm btn-outline-secondary action-btn" data-id="${p.id}" data-type="patient" data-action="view">View</button>
-              <button class="btn btn-sm btn-outline-primary action-btn" data-id="${p.id}" data-type="patient" data-action="edit">Edit</button>
-              <button class="btn btn-sm btn-outline-danger action-btn" data-id="${p.id}" data-type="patient" data-action="delete">Delete</button>
-            </div>
-          </td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function buildAppointments() {
-      const tbody = el('#appointmentsTable tbody'); tbody.innerHTML = '';
-      (state.appointments || []).forEach(a => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${a.id||''}</td><td>${escapeHtml(a.patient_name||a.patient?.name||'')}</td><td>${escapeHtml(a.doctor_name||a.doctor?.name||'')}</td><td>${formatDate(a.datetime||a.date)}</td><td>${escapeHtml(a.status||'')}</td>
-          <td>
-            <div class="btn-group">
-              <button class="btn btn-sm btn-outline-secondary action-btn" data-id="${a.id}" data-type="appointment" data-action="view">View</button>
-              <button class="btn btn-sm btn-outline-primary action-btn" data-id="${a.id}" data-type="appointment" data-action="edit">Edit</button>
-              <button class="btn btn-sm btn-outline-danger action-btn" data-id="${a.id}" data-type="appointment" data-action="delete">Delete</button>
-            </div>
-          </td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // ---------- LOAD DATA ----------
-    async function loadAll() {
-      try {
-        // parallel load; endpoints assumed: /users, /doctors, /patients, /appointments
-        const [users, doctors, patients, appointments] = await Promise.all([
-          api('/users').catch(()=>null),
-          api('/doctors').catch(()=>null),
-          api('/patients').catch(()=>null),
-          api('/appointments').catch(()=>null)
-        ]);
-        state.users = users || [];
-        state.doctors = doctors || [];
-        state.patients = patients || [];
-        state.appointments = appointments || [];
-
-        el('#statUsers').textContent = state.users.length;
-        el('#statDoctors').textContent = state.doctors.length;
-        el('#statPatients').textContent = state.patients.length;
-        el('#statAppointments').textContent = state.appointments.length;
-        el('#dbStatus').textContent = 'Connected';
-
-        buildUsers(); buildDoctors(); buildPatients(); buildAppointments();
-      } catch (err) {
-        console.error('loadAll error', err);
-        el('#dbStatus').textContent = 'Error';
-        showToast('Could not load data: ' + (err.message || err), 'warning');
-        // fallback sample data so UI is usable
-        if (!state.users.length) state.users = [{id:1,name:'Admin User',email:'admin@example.com',role:'admin',created_at:new Date().toISOString()}];
-        if (!state.patients.length) state.patients = [{id:1,name:'John Doe',age:34,phone:'9876543210',created_at:new Date().toISOString()}];
-        buildUsers(); buildPatients();
-      }
-    }
-
-    // ---------- ACTIONS ----------
-    async function deleteEntity(apiPath) {
-      if(!confirm('Delete permanently?')) return false;
-      try {
-        await api(apiPath, { method: 'DELETE' });
-        showToast('Deleted', 'success'); await loadAll();
-      } catch (e) { showToast('Delete failed: ' + (e.message||e), 'warning'); console.error(e); }
-    }
-
-    function openView(title, obj) {
-      el('#viewModalTitle').textContent = title + ' Details';
-      const body = el('#viewModalBody'); body.innerHTML = '';
-      if (!obj) { body.innerHTML = '<p class="text-muted">Not found</p>'; new bootstrap.Modal(el('#viewModal')).show(); return; }
-      const dl = document.createElement('div'); dl.className='mb-2';
-      Object.keys(obj).forEach(k => {
-        const v = obj[k];
-        const row = document.createElement('div'); row.innerHTML = '<strong>' + escapeHtml(k) + ':</strong> ' + escapeHtml(String(v===null||v===undefined?'':v));
-        dl.appendChild(row);
-      });
-      body.appendChild(dl);
-      new bootstrap.Modal(el('#viewModal')).show();
-    }
-
-    function openEditModal(title, obj, apiPath) {
-      el('#editModalTitle').textContent = 'Edit ' + title;
-      const form = el('#editForm'); form.innerHTML = '';
-      if (!obj) { form.innerHTML = '<div class="text-muted">Not found</div>'; new bootstrap.Modal(el('#editModal')).show(); return; }
-      // generate inputs for editable props
-      Object.keys(obj).forEach(k => {
-        if (k === 'id' || k === 'created_at' || k === 'createdAt') return;
-        const val = obj[k] === null || obj[k] === undefined ? '' : obj[k];
-        const div = document.createElement('div'); div.className='mb-2';
-        div.innerHTML = `<label class="form-label small">${escapeHtml(k)}</label><input class="form-control" name="${escapeHtml(k)}" value="${escapeHtml(val)}" />`;
-        form.appendChild(div);
-      });
-      el('#saveEditBtn').onclick = async () => {
-        const fd = new FormData(form);
-        const payload = {};
-        for (const [k, v] of fd.entries()) payload[k] = v;
-        try {
-          await api(apiPath + '/' + obj.id, { method: 'PUT', body: JSON.stringify(payload) });
-          showToast('Saved', 'success'); new bootstrap.Modal(el('#editModal')).hide(); await loadAll();
-        } catch (e) { showToast('Save failed: ' + (e.message||e), 'warning'); console.error(e); }
-      };
-      new bootstrap.Modal(el('#editModal')).show();
-    }
-
-    function openCreateModal(title, apiPath) {
-      el('#editModalTitle').textContent = 'Create ' + title;
-      const form = el('#editForm'); form.innerHTML = '';
-      // generic fields to fill
-      const fields = ['name','email','phone','role','age','specialty','address','date','datetime','status'];
-      fields.forEach(f => {
-        const div = document.createElement('div'); div.className='mb-2';
-        div.innerHTML = `<label class="form-label small">${escapeHtml(f)}</label><input name="${escapeHtml(f)}" class="form-control" />`;
-        form.appendChild(div);
-      });
-      el('#saveEditBtn').onclick = async () => {
-        const fd = new FormData(form); const payload = {};
-        for (const [k, v] of fd.entries()) if (v) payload[k] = v;
-        try {
-          await api(apiPath, { method: 'POST', body: JSON.stringify(payload) });
-          showToast('Created', 'success'); new bootstrap.Modal(el('#editModal')).hide(); await loadAll();
-        } catch (e) { showToast('Create failed: ' + (e.message||e), 'warning'); console.error(e); }
-      };
-      new bootstrap.Modal(el('#editModal')).show();
-    }
-
-    // ---------- EXPORT ----------
-    function exportCSVFor(kind) {
-      let data = state[kind] || [];
-      if (!data.length) return showToast('No records', 'info');
-      // convert to CSV (simple)
-      const keys = Object.keys(data[0]);
-      const rows = [keys.join(',')];
-      data.forEach(r => {
-        rows.push(keys.map(k => '"' + String(r[k]===undefined||r[k]===null?'':r[k]).replace(/"/g,'""') + '"').join(','));
-      });
-      download(kind + '.csv', rows.join('\\n'));
-    }
-
-    // ---------- EVENTS ----------
-    function attachEvents() {
-      // sidebar nav
-      els('.sidebar .nav-link').forEach(a => {
-        a.addEventListener('click', (e) => {
-          e.preventDefault();
-          els('.sidebar .nav-link').forEach(n=>n.classList.remove('active'));
-          a.classList.add('active');
-          const tab = a.dataset.tab;
-          if (tab === 'overview') showPane('usersPane'); // overview maps to first
-          if (tab === 'users') showPane('usersPane');
-          if (tab === 'doctors') showPane('doctorsPane');
-          if (tab === 'patients') showPane('patientsPane');
-          if (tab === 'appointments') showPane('appointmentsPane');
-        });
-      });
-
-      // top tab buttons
-      els('#adminTabs .nav-link').forEach((btn,i) => {
-        btn.addEventListener('click', ()=> {
-          els('#adminTabs .nav-link').forEach(b=>b.classList.remove('active'));
-          btn.classList.add('active');
-          const tgt = btn.dataset.target;
-          showPane(tgt || ['usersPane','doctorsPane','patientsPane','appointmentsPane'][i]);
-        });
-      });
-
-      el('#refreshAll').addEventListener('click', ()=>loadAll());
-      el('#exportAllCSV').addEventListener('click', ()=>['users','doctors','patients','appointments'].forEach(k=>exportCSVFor(k)));
-      el('#usersExport').addEventListener('click', ()=>exportCSVFor('users'));
-      el('#doctorsExport').addEventListener('click', ()=>exportCSVFor('doctors'));
-      el('#patientsExport').addEventListener('click', ()=>exportCSVFor('patients'));
-      el('#apptsExport')?.addEventListener('click', ()=>exportCSVFor('appointments'));
-
-      el('#addUserBtn').addEventListener('click', ()=>openCreateModal('User','/users'));
-      el('#addDoctorBtn')?.addEventListener('click', ()=>openCreateModal('Doctor','/doctors'));
-      el('#addPatientBtnMobile').addEventListener('click', ()=>openCreateModal('Patient','/patients'));
-      el('#addApptBtn')?.addEventListener('click', ()=>openCreateModal('Appointment','/appointments'));
-
-      el('#usersFilter').addEventListener('input', (e)=>filterTable('users', e.target.value));
-      el('#doctorsFilter').addEventListener('input', (e)=>filterTable('doctors', e.target.value));
-      el('#patientsFilter').addEventListener('input', (e)=>filterTable('patients', e.target.value));
-      el('#apptStatusFilter')?.addEventListener('change', (e)=>filterTable('appointments', e.target.value));
-      el('#globalSearch').addEventListener('input', (e)=>globalSearch(e.target.value));
-
-      // table actions (delegation)
-      document.body.addEventListener('click', async (ev) => {
-        const b = ev.target.closest('button');
-        if(!b) return;
-        const action = b.dataset.action;
-        const id = b.dataset.id;
-        const type = b.dataset.type;
-        if(!action) return;
-        if(action === 'view') {
-          const obj = (type==='user' ? state.users.find(x=>String(x.id)===String(id)) : type==='doctor' ? state.doctors.find(x=>String(x.id)===String(id)) : type==='patient' ? state.patients.find(x=>String(x.id)===String(id)) : state.appointments.find(x=>String(x.id)===String(id)));
-          openView(type.charAt(0).toUpperCase() + type.slice(1), obj);
-        } else if(action === 'edit') {
-          const obj = (type==='user' ? state.users.find(x=>String(x.id)===String(id)) : type==='doctor' ? state.doctors.find(x=>String(x.id)===String(id)) : type==='patient' ? state.patients.find(x=>String(x.id)===String(id)) : state.appointments.find(x=>String(x.id)===String(id)));
-          openEditModal(type.charAt(0).toUpperCase() + type.slice(1), obj, '/' + type + (type==='appointment' ? 's' : 's').replace('//','/'));
-        } else if(action === 'delete') {
-          await deleteEntity('/' + (type==='appointment' ? 'appointments' : type + 's') + '/' + id);
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      return fetch(url, Object.assign({}, opts, { headers })).then(async res => {
+        const t = await res.text().catch(()=>null);
+        let body = null;
+        try { body = t ? JSON.parse(t) : null; } catch(e) { body = t; }
+        if (!res.ok) {
+          const err = new Error(body && (body.error || body.message) ? (body.error || body.message) : res.statusText);
+          err.status = res.status; err.body = body;
+          throw err;
         }
-      });
-
-      // logout
-      el('#logoutBtnSide').addEventListener('click', (e)=>{ e.preventDefault(); localStorage.removeItem('hms_token'); localStorage.removeItem('hms_user'); location.href='index.html'; });
-    }
-
-    // ---------- FILTER / SEARCH ----------
-    function filterTable(kind, term) {
-      term = String(term||'').toLowerCase().trim();
-      if(!term) { rebuild(kind); return; }
-      const list = (state[kind]||[]).filter(item => JSON.stringify(item).toLowerCase().includes(term));
-      renderFiltered(kind, list);
-    }
-    function renderFiltered(kind, list) {
-      if(kind==='users') { state.usersFiltered = list; buildUsersFrom(list); return; }
-      if(kind==='doctors') { buildDoctorsFrom(list); return; }
-      if(kind==='patients') { buildPatientsFrom(list); return; }
-      if(kind==='appointments') { buildAppointmentsFrom(list); return; }
-    }
-    function buildUsersFrom(list) {
-      const tbody = el('#usersTable tbody'); tbody.innerHTML=''; (list||[]).forEach(u=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${u.id||''}</td><td>${escapeHtml(u.name||'')}</td><td>${escapeHtml(u.email||'')}</td><td>${roleBadge(u.role)}</td><td>${formatDate(u.created_at||u.createdAt)}</td><td><div class="btn-group"><button class="btn btn-sm btn-outline-secondary action-btn" data-id="${u.id}" data-type="user" data-action="view">View</button></div></td>`; tbody.appendChild(tr); });
-    }
-    function buildDoctorsFrom(list){ const tbody=el('#doctorsTable tbody'); tbody.innerHTML=''; (list||[]).forEach(d=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${d.id||''}</td><td>${escapeHtml(d.name||'')}</td><td>${escapeHtml(d.specialty||'')}</td><td>${escapeHtml(d.phone||'')}</td><td>${formatDate(d.created_at||d.createdAt)}</td><td>—</td>`; tbody.appendChild(tr); }); }
-    function buildPatientsFrom(list){ const tbody=el('#patientsTable tbody'); tbody.innerHTML=''; (list||[]).forEach(p=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${p.id||''}</td><td>${escapeHtml(p.name||'')}</td><td>${p.age||''}</td><td>${escapeHtml(p.phone||'')}</td><td>${formatDate(p.created_at||p.createdAt)}</td><td>—</td>`; tbody.appendChild(tr); }); }
-    function buildAppointmentsFrom(list){ const tbody=el('#appointmentsTable tbody'); tbody.innerHTML=''; (list||[]).forEach(a=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${a.id||''}</td><td>${escapeHtml(a.patient_name||a.patient?.name||'')}</td><td>${escapeHtml(a.doctor_name||a.doctor?.name||'')}</td><td>${formatDate(a.datetime||a.date)}</td><td>${escapeHtml(a.status||'')}</td><td>—</td>`; tbody.appendChild(tr); }); }
-
-    function globalSearch(term) { term = String(term||'').toLowerCase().trim(); if(!term) { loadAll(); return;} filterTable('users', term); filterTable('doctors', term); filterTable('patients', term); filterTable('appointments', term); }
-
-    function rebuild(kind) { if(kind==='users') buildUsers(); if(kind==='doctors') buildDoctors(); if(kind==='patients') buildPatients(); if(kind==='appointments') buildAppointments(); }
-
-    // ---------- SIMPLE UI HELPERS ----------
-    function showPane(id) {
-      ['usersPane','doctorsPane','patientsPane','appointmentsPane'].forEach(p=>{
-        const elp = document.getElementById(p);
-        if(!elp) return;
-        if(p === id) { elp.style.display = ''; } else { elp.style.display = 'none'; }
+        return body;
       });
     }
 
-    // ---------- INIT ----------
-    (function init(){
-      attachEvents();
-      loadAll();
+    // check admin on load
+    (async function checkAdmin(){
+      try {
+        const userRaw = localStorage.getItem('hms_user');
+        if (!userRaw) throw new Error('Not signed in');
+        const userC = JSON.parse(userRaw);
+        // quick role check from localStorage
+        if (!String(userC.role || '').toLowerCase().includes('admin')) throw new Error('Not an admin');
+
+        // verify token server-side by calling /auth/me
+        const me = await authFetch('/auth/me');
+        const serverUser = me && me.user ? me.user : me;
+        if (!serverUser || !String(serverUser.role||'').toLowerCase().includes('admin')) throw new Error('Not an admin');
+
+        // ok — show admin UI
+        document.getElementById('adminContent').style.display = 'block';
+
+        // populate admin name & avatar
+        const adminNameEl = document.getElementById('adminName');
+        const adminAvatar = document.getElementById('adminAvatar');
+        adminNameEl.textContent = serverUser.name || serverUser.email || 'Admin';
+        adminAvatar.textContent = (serverUser.name||serverUser.email||'A').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
+
+        // Fetch & populate basic overview stats (best-effort; endpoints may vary)
+        Promise.allSettled([
+          authFetch('/users').catch(()=>[]),
+          authFetch('/doctors').catch(()=>[]),
+          authFetch('/appointments').catch(()=>[]),
+          authFetch('/bills').catch(()=>[])
+        ]).then(results => {
+          const users = results[0].status==='fulfilled' ? results[0].value : [];
+          const docs = results[1].status==='fulfilled' ? results[1].value : [];
+          const appts = results[2].status==='fulfilled' ? results[2].value : [];
+          const bills = results[3].status==='fulfilled' ? results[3].value : [];
+
+          document.getElementById('statUsers').textContent = (Array.isArray(users)?users.length: (users && users.count) || '-');
+          document.getElementById('statDoctors').textContent = (Array.isArray(docs)?docs.length: (docs && docs.count) || '-');
+          document.getElementById('statAppointments').textContent = (Array.isArray(appts)?appts.length: (appts && appts.count) || '-');
+          document.getElementById('statBilling').textContent = (Array.isArray(bills)?bills.length: (bills && bills.count) || '-');
+        });
+
+        // wire admin dropdown actions
+        document.getElementById('adminSignOut').addEventListener('click', function(e){
+          e.preventDefault();
+          localStorage.removeItem('hms_token');
+          localStorage.removeItem('hms_user');
+          window.location.href = 'admin-login.html';
+        });
+
+        document.getElementById('adminEditProfile').addEventListener('click', function(e){
+          e.preventDefault();
+          // you can implement an edit modal or page
+          alert('Edit profile not implemented yet — coming soon');
+        });
+
+      } catch (err) {
+        console.warn('admin auth fail', err);
+        document.getElementById('adminBlocked').style.display = 'block';
+        document.getElementById('adminContent').style.display = 'none';
+      }
     })();
-
-  })();
   </script>
 </body>
 </html>
