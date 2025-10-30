@@ -1,741 +1,301 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Doctor Dashboard — HMS</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Doctor Portal — HMS</title>
 
-  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
-
-  <!-- Shared site styles -->
-  <link rel="stylesheet" href="assets/css/style.css" />
-
+  <link rel="stylesheet" href="assets/css/style.css"/>
   <style>
-    .user-pill { display:flex; align-items:center; gap:.6rem; }
-    .user-avatar { width:40px; height:40px; border-radius:50%; background:#fdece8; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:var(--accent); }
-    .section-card { border-radius:12px; box-shadow:0 8px 22px rgba(2,6,23,0.04); padding:16px; background:#fff; }
-    .mini-muted { color:#6b7280; font-size:.9rem; }
-    .kv { font-weight:600; }
-    .queue-item { display:flex; align-items:center; justify-content:space-between; padding:.6rem .8rem; border-bottom:1px solid #f1f5f9; }
-    .note-box { background:#f8fafc; padding:10px; border-radius:8px; }
-    .pill { padding:6px 10px; border-radius:999px; font-size:.8rem; }
-    .status-scheduled { background:#eef2ff; color:#3730a3; }
-    .status-inprogress { background:#fff7ed; color:#92400e; }
-    .status-completed { background:#ecfdf5; color:#065f46; }
-    .status-noshow { background:#fff1f2; color:#9f1239; }
-    .small-muted { font-size:.85rem; color:#6b7280; }
+    .section-card{border-radius:12px;padding:18px;background:#fff;box-shadow:0 6px 18px rgba(2,6,23,0.04);}
+    .user-avatar{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;font-weight:700;}
+    .small-muted{color:#6b7280;}
+    .tag{padding:.2rem .5rem;border-radius:8px;background:#f1f5f9;font-weight:600;}
   </style>
-  <!-- add near top of each page (once) -->
-<script>
-  // config.js (global)
-  // Production backend URL (use your render backend URL). For local dev replace accordingly.
-  window.HMS = window.HMS || {};
-  // Use absolute backend URL in production:
-  window.HMS.API_BASE = window.HMS.API_BASE || 'https://hms-backend-yqjj.onrender.com/api';
 
-  // authFetch will be used by all pages to attach token & handle JSON
-  window.HMS.authFetch = async function(path, opts = {}) {
-    const base = window.HMS.API_BASE.replace(/\/$/,'');
-    const url = path.startsWith('http') ? path : `${base}/${path.replace(/^\/+/,'')}`;
-    const token = localStorage.getItem('hms_token');
-    const defaultHeaders = {'Content-Type':'application/json'};
-    opts.headers = Object.assign(defaultHeaders, opts.headers || {});
-    if (token) opts.headers['Authorization'] = 'Bearer ' + token;
-    const res = await fetch(url, opts);
-    const text = await res.text().catch(()=>null);
-    let body = null;
-    try { body = text ? JSON.parse(text) : null; } catch(e) { body = text; }
-    if (!res.ok) {
-      const err = new Error(body && (body.error || body.message) ? (body.error || body.message) : res.statusText);
-      err.status = res.status; err.body = body;
-      throw err;
-    }
-    return body;
-  };
-</script>
-
+  <script>
+    window.HMS = window.HMS || {};
+    window.HMS.API_BASE = window.HMS.API_BASE || 'https://hms-backend-yqjj.onrender.com/api';
+    window.HMS.authFetch = window.HMS.authFetch || (async function(path, opts = {}){
+      const base = window.HMS.API_BASE.replace(/\/$/,'');
+      const url = path.match(/^https?:\/\//) ? path : (base + '/' + path.replace(/^\/+/,''));
+      const token = localStorage.getItem('hms_token');
+      const headers = Object.assign({'Content-Type':'application/json'}, opts.headers || {});
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      const res = await fetch(url, Object.assign({}, opts, { headers }));
+      const txt = await res.text().catch(()=>null);
+      let body = null;
+      try { body = txt ? JSON.parse(txt) : null; } catch(e) { body = txt; }
+      if (!res.ok) { const err = new Error(body && (body.error || body.message) ? (body.error || body.message) : res.statusText); err.status = res.status; err.body = body; throw err; }
+      return body;
+    });
+  </script>
 </head>
 <body>
   <!-- NAV -->
   <nav class="navbar navbar-expand-lg">
-  <div class="container">
-    <a class="navbar-brand" href="index.html">HMS</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <div class="collapse navbar-collapse" id="mainNav">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
-        <li class="nav-item"><a class="nav-link" href="register.html">Sign up</a></li>
-      </ul>
-
-      <div class="d-flex align-items-center ms-auto" id="navUserPill"></div>
+    <div class="container">
+      <a class="navbar-brand" href="index.html">HMS</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navD"> <span class="navbar-toggler-icon"></span> </button>
+      <div class="collapse navbar-collapse" id="navD">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+          <li class="nav-item"><a class="nav-link" href="patients.html">Patients</a></li>
+          <li class="nav-item"><a class="nav-link" href="doctors.html">Doctors</a></li>
+          <li class="nav-item"><a class="nav-link" href="admin.html">Admin</a></li>
+        </ul>
+        <div id="navUserPill" class="d-flex align-items-center ms-auto"></div>
+      </div>
     </div>
-  </div>
-</nav>
-
-<script>
-  // small script to populate user pill (add after config.js)
-  (function(){
-    const el = document.getElementById('navUserPill');
-    const raw = localStorage.getItem('hms_user');
-    if (!raw) {
-      el.innerHTML = '';
-      return;
-    }
-    try {
-      const u = JSON.parse(raw);
-      el.innerHTML = `
-        <div class="dropdown">
-          <a class="dropdown-toggle d-flex align-items-center text-decoration-none" id="userDrop" data-bs-toggle="dropdown" href="#">
-            <div style="width:36px;height:36px;border-radius:50%;background:#eef2ff;display:inline-flex;align-items:center;justify-content:center;margin-right:.6rem;font-weight:700;">${(u.name||u.email||'U').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}</div>
-            <span style="font-weight:600">${u.name || u.email}</span>
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDrop">
-            <li><a class="dropdown-item" href="#" id="viewProfileLink">Edit profile</a></li>
-            <li><a class="dropdown-item" href="#" id="signOutLink">Sign out</a></li>
-          </ul>
-        </div>
-      `;
-      document.getElementById('signOutLink').addEventListener('click', (e)=> {
-        e.preventDefault();
-        localStorage.removeItem('hms_token');
-        localStorage.removeItem('hms_user');
-        // redirect to index or login
-        window.location.href = 'index.html';
-      });
-      document.getElementById('viewProfileLink').addEventListener('click', (e) => {
-        e.preventDefault();
-        // route based on role
-        const role = (u.role||'').toLowerCase();
-        if (role.includes('doctor')) window.location.href = 'doctors.html#edit';
-        else if (role.includes('patient')) window.location.href = 'patients.html#edit';
-        else if (role.includes('admin')) window.location.href = 'admin.html#edit';
-        else window.location.href = 'dashboard.html';
-      });
-    } catch(e){ el.innerHTML = ''; }
-  })();
-</script>
-
-
   </nav>
 
-  <main class="container mt-4 mb-5">
+  <main class="container my-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div>
-        <h3 class="mb-0">Doctor Workspace</h3>
-        <div class="mini-muted">Manage schedule, patients, diagnoses and prescriptions</div>
+        <h4 class="mb-0">Doctor Dashboard</h4>
+        <div class="small-muted">Patients treated, medicine history and notes</div>
       </div>
-
-      <div class="d-flex gap-2">
-        <input id="searchBox" class="form-control form-control-sm" placeholder="Search patients / appointments" style="min-width:260px"/>
-      </div>
+      <div id="docSignedIn" class="small-muted"></div>
     </div>
 
     <div class="row g-4">
-      <!-- Left: schedule & queue -->
-      <div class="col-lg-7">
+      <div class="col-lg-4">
         <div class="section-card mb-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Today's Schedule</h5>
-            <div class="small-muted">Local time: <span id="localTime"></span></div>
+          <h6>Your Profile</h6>
+          <div class="d-flex gap-3 align-items-center">
+            <div class="user-avatar" id="docAvatar">D</div>
+            <div>
+              <div id="docName" style="font-weight:700"></div>
+              <div class="small-muted" id="docEmail"></div>
+            </div>
           </div>
-
-          <div class="table-responsive mt-3">
-            <table class="table table-hover align-middle">
-              <thead>
-                <tr><th>Time</th><th>Patient</th><th>Type</th><th>Status</th><th>Actions</th></tr>
-              </thead>
-              <tbody id="scheduleBody">
-                <tr><td colspan="5" class="small-muted">Loading schedule...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="section-card mb-3">
-          <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Patients Waiting</h5>
-            <div class="small-muted">Queue length: <span id="queueCount">0</span></div>
-          </div>
-          <div id="queueList" class="mt-3">
-            <div class="small-muted">Loading queue...</div>
+          <hr/>
+          <div><strong>Specialty:</strong> <span id="docSpecialty"></span></div>
+          <div><strong>Phone:</strong> <span id="docPhone"></span></div>
+          <div class="mt-3">
+            <button id="docSignOut" class="btn btn-outline-danger btn-sm">Sign out</button>
           </div>
         </div>
 
         <div class="section-card">
-          <h5 class="mb-2">Patient History & Visits</h5>
-          <div class="mb-2">
-            <label class="form-label small">Select patient</label>
-            <select id="patientSelect" class="form-select form-select-sm"><option>Loading patients...</option></select>
-          </div>
-
-          <div id="patientHistory" class="mt-2">
-            <div class="small-muted">Choose a patient to view history</div>
+          <h6>Quick actions</h6>
+          <div class="d-grid gap-2">
+            <button id="myPatientsBtn" class="btn btn-primary btn-sm">My patients</button>
+            <button id="addNoteBtn" class="btn btn-outline-primary btn-sm">Add patient note</button>
+            <a class="btn btn-outline-secondary btn-sm" href="medicines.html">Pharmacy</a>
           </div>
         </div>
       </div>
 
-      <!-- Right: notes, medicines, HR messages -->
-      <div class="col-lg-5">
+      <div class="col-lg-8">
         <div class="section-card mb-3">
-          <h6>Diagnosis / Visit Notes</h6>
-          <div class="small-muted mb-2">Select an appointment and add notes</div>
-          <div>
-            <label class="form-label small">Appointment</label>
-            <select id="apptForNotes" class="form-select form-select-sm"><option>Loading appointments...</option></select>
-          </div>
-          <textarea id="diagNotes" rows="5" class="form-control mt-2" placeholder="Enter diagnosis, observations, instructions..."></textarea>
-          <div class="d-flex gap-2 mt-2">
-            <button id="saveDiagBtn" class="btn btn-primary btn-sm">Save Note</button>
-            <button id="markCompleteBtn" class="btn btn-outline-success btn-sm">Mark Complete</button>
-            <button id="toggleInpatientBtn" class="btn btn-outline-secondary btn-sm">Toggle Inpatient</button>
-          </div>
-          <div id="diagMsg" class="mt-2"></div>
+          <h6>Patients You're Treating</h6>
+          <div id="patientsTreatedList" class="mt-2 small-muted">Loading...</div>
         </div>
 
         <div class="section-card mb-3">
-          <h6>Medicines / Issue</h6>
-          <div class="small-muted mb-2">Issue medicine to a patient</div>
-
-          <div class="mb-2">
-            <label class="form-label small">Patient</label>
-            <select id="medPatient" class="form-select form-select-sm"><option>Loading patients...</option></select>
+          <h6>Selected Patient — Details</h6>
+          <div id="selectedPatientCard" class="mt-2 small-muted">Select a patient from the list.</div>
+          <div class="mt-3" id="patientActions" style="display:none">
+            <button id="viewHistBtn" class="btn btn-outline-secondary btn-sm">View history</button>
+            <button id="issueMedBtn" class="btn btn-success btn-sm">Issue medicine</button>
+            <button id="markTreatedBtn" class="btn btn-primary btn-sm">Mark treated</button>
           </div>
+        </div>
 
-          <div class="mb-2">
-            <label class="form-label small">Medicine</label>
-            <select id="medSelect" class="form-select form-select-sm"><option>Loading medicines...</option></select>
-          </div>
-
-          <div class="mb-2">
-            <label class="form-label small">Notes</label>
-            <input id="medNote" class="form-control form-control-sm" placeholder="Dosage / instructions" />
-          </div>
-
-          <div class="d-grid">
-            <button id="issueMedBtn" class="btn btn-primary btn-sm">Issue Medicine</button>
-          </div>
-
-          <div id="medMsg" class="mt-2"></div>
+        <div class="section-card mb-3">
+          <h6>Medicine History (selected patient)</h6>
+          <div id="patMedHistory" class="mt-2 small-muted">Select a patient to view medicine history.</div>
         </div>
 
         <div class="section-card">
-          <h6>HR Messages</h6>
-          <div id="hrList" class="mb-2 small-muted">Loading messages...</div>
-
-          <textarea id="hrText" rows="3" class="form-control" placeholder="Post a message to HR/team"></textarea>
-          <div class="d-grid mt-2">
-            <button id="postHrBtn" class="btn btn-outline-primary btn-sm">Post Message</button>
-          </div>
-          <div id="hrMsg" class="mt-2"></div>
+          <h6>Add Note / Diagnosis</h6>
+          <form id="doctorNoteForm">
+            <div class="mb-2"><label class="form-label small">Patient</label><select id="notePatientSelect" class="form-select form-select-sm"></select></div>
+            <div class="mb-2"><label class="form-label small">Title</label><input id="noteTitle" class="form-control form-control-sm" /></div>
+            <div class="mb-2"><label class="form-label small">Notes</label><textarea id="noteBody" rows="4" class="form-control form-control-sm"></textarea></div>
+            <div class="d-grid"><button class="btn btn-primary btn-sm">Save note</button></div>
+          </form>
         </div>
       </div>
     </div>
   </main>
 
-  <!-- Bootstrap JS -->
+  <footer class="site-footer"><div class="container">© <span id="yearDoc"></span> HMS</div></footer>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-  (function(){
-    // API base: use global if set or absolute relative to site
-    const API_BASE = (window.API_BASE_GLOBAL || "") || "/api";
+    document.getElementById('yearDoc').textContent = new Date().getFullYear();
+    const authFetch = window.HMS.authFetch;
 
-    // small auth fetch that attaches token and normalizes response
-    function authFetch(path, opts = {}) {
-      const url = path.startsWith('http') ? path : API_BASE.replace(/\/$/,'') + '/' + path.replace(/^\/+/,'');
-      const headers = Object.assign({'Content-Type':'application/json'}, opts.headers || {});
-      const token = localStorage.getItem('hms_token');
-      if (token) headers['Authorization'] = 'Bearer ' + token;
-      const fetchOpts = Object.assign({}, opts, { headers });
-      return fetch(url, fetchOpts).then(async res => {
-        const text = await res.text().catch(()=>null);
-        const body = (() => { try { return text ? JSON.parse(text) : null } catch(e){ return text } })();
-        if (!res.ok) {
-          const err = new Error(body && body.error ? body.error : (body && body.message ? body.message : res.statusText));
-          err.status = res.status; err.body = body;
-          throw err;
-        }
-        return body;
-      });
-    }
-
-    // DOM refs
-    const signedInDoctorEl = document.getElementById('signedInDoctor');
-    const signOutBtn = document.getElementById('doctorSignOut');
-    const localTimeEl = document.getElementById('localTime');
-    const scheduleBody = document.getElementById('scheduleBody');
-    const queueList = document.getElementById('queueList');
-    const queueCount = document.getElementById('queueCount');
-    const patientSelect = document.getElementById('patientSelect');
-    const patientHistory = document.getElementById('patientHistory');
-    const apptForNotes = document.getElementById('apptForNotes');
-    const diagNotes = document.getElementById('diagNotes');
-    const saveDiagBtn = document.getElementById('saveDiagBtn');
-    const markCompleteBtn = document.getElementById('markCompleteBtn');
-    const toggleInpatientBtn = document.getElementById('toggleInpatientBtn');
-    const diagMsg = document.getElementById('diagMsg');
-    const medPatient = document.getElementById('medPatient');
-    const medSelect = document.getElementById('medSelect');
-    const medNote = document.getElementById('medNote');
-    const issueMedBtn = document.getElementById('issueMedBtn');
-    const medMsg = document.getElementById('medMsg');
-    const hrList = document.getElementById('hrList');
-    const hrText = document.getElementById('hrText');
-    const postHrBtn = document.getElementById('postHrBtn');
-    const hrMsg = document.getElementById('hrMsg');
-    const searchBox = document.getElementById('searchBox');
-
-    // state
-    let doctor = null;
-    let appointments = []; // all appts
-    let patients = [];
-    let medicines = [];
-    let hrMessages = [];
-
-    // helper
-    function escapeHtml(s){ if (s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-    function fmt(dt){ if (!dt) return ''; const d=new Date(dt); if (isNaN(d)) return dt; return d.toLocaleString(); }
-    function statusClass(st){ st = (st||'').toLowerCase(); if (st==='scheduled') return 'status-scheduled pill'; if (st==='in-progress' || st==='inprogress') return 'status-inprogress pill'; if (st==='completed') return 'status-completed pill'; if (st==='no-show' || st==='noshow') return 'status-noshow pill'; return 'pill'; }
-
-    // show doctor pill
-    function showDoctor(d){
-      signedInDoctorEl.innerHTML = '';
-      const av = document.createElement('div'); av.className='user-avatar'; av.textContent = (d.name||'D').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
-      const info = document.createElement('div'); info.innerHTML = `<div style="font-weight:600">${escapeHtml(d.name||d.email||'Doctor')}</div><div class="mini-muted">${escapeHtml(d.specialty||'')}</div>`;
-      signedInDoctorEl.appendChild(av); signedInDoctorEl.appendChild(info);
-    }
-
-    // init time
-    function updateLocalTime(){ localTimeEl.textContent = new Date().toLocaleString(); }
-    setInterval(updateLocalTime, 1000); updateLocalTime();
-
-    // load initial data
-    async function init(){
+    (function populateNav(){
+      const el = document.getElementById('navUserPill');
+      const raw = localStorage.getItem('hms_user');
+      if(!raw){ el.innerHTML = '<a class="btn btn-sm btn-outline-primary" href="login.html">Login</a>'; return; }
       try {
-        const token = localStorage.getItem('hms_token');
-        if (!token) return redirectToDashboard();
-
-        // try /auth/me
-        try {
-          const me = await authFetch('/auth/me');
-          doctor = me && me.user ? me.user : me;
-        } catch(e) {
-          // fallback to local storage
-          try { doctor = JSON.parse(localStorage.getItem('hms_user')||'null'); } catch(e){ doctor = null; }
-          if (!doctor) return redirectToDashboard();
-        }
-
-        showDoctor(doctor);
-
-        // parallel fetch
-        const [apptsResp, patsResp, medsResp, hrResp] = await Promise.allSettled([
-          authFetch('/appointments'),
-          authFetch('/patients'),
-          authFetch('/medicines'),
-          authFetch('/hr_messages')
-        ]);
-
-        appointments = apptsResp.status === 'fulfilled' ? (Array.isArray(apptsResp.value) ? apptsResp.value : (apptsResp.value.data || [])) : [];
-        patients = patsResp.status === 'fulfilled' ? (Array.isArray(patsResp.value) ? patsResp.value : (patsResp.value.data || [])) : [];
-        medicines = medsResp.status === 'fulfilled' ? (Array.isArray(medsResp.value) ? medsResp.value : (medsResp.value.data || [])) : [];
-        hrMessages = hrResp.status === 'fulfilled' ? (Array.isArray(hrResp.value) ? hrResp.value : (hrResp.value.data || [])) : [];
-
-        renderSchedule();
-        renderQueue();
-        populatePatientSelects();
-        renderPatientHistoryPlaceholder();
-        populateAppointmentsForNotes();
-        renderMedicines();
-        renderHR();
-      } catch(err){
-        console.error('init err', err);
-      }
-    }
-
-    function redirectToDashboard(){ // sign out style redirect
-      localStorage.removeItem('hms_token'); localStorage.removeItem('hms_user');
-      window.location.href = 'dashboard.html';
-    }
-
-    // search filter
-    searchBox.addEventListener('input', function(){
-      renderSchedule(this.value);
-    });
-
-    // render schedule (today's)
-    function renderSchedule(q = '') {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const end = new Date(today); end.setDate(end.getDate()+1);
-      const filtered = (appointments || []).filter(a => {
-        const dt = new Date(a.datetime || a.date || a.created_at || null);
-        return dt >= today && dt < end;
-      });
-
-      // optionally filter by search
-      const search = (q || '').trim().toLowerCase();
-      const rows = filtered
-        .filter(a => {
-          if (!search) return true;
-          const patientName = (a.patient_name || a.patient?.name || '').toLowerCase();
-          const notes = (a.notes||'').toLowerCase();
-          return patientName.includes(search) || (a.id && String(a.id).includes(search)) || notes.includes(search);
-        })
-        .sort((x,y)=> new Date(x.datetime||x.date) - new Date(y.datetime||y.date))
-        .map(a => {
-          const t = fmt(a.datetime || a.date);
-          const patient = a.patient_name || a.patient?.name || (patients.find(p=>String(p.id)===String(a.patient_id))?.name) || '—';
-          return `<tr>
-            <td style="width:120px">${escapeHtml(t)}</td>
-            <td>${escapeHtml(patient)}</td>
-            <td>${escapeHtml((a.inpatient ? 'Inpatient' : 'Outpatient') || 'Outpatient')}</td>
-            <td><span class="${statusClass(a.status)}">${escapeHtml(a.status || 'scheduled')}</span></td>
-            <td>
-              <div class="btn-group">
-                <button class="btn btn-sm btn-outline-primary" data-action="start" data-id="${a.id}">Start</button>
-                <button class="btn btn-sm btn-outline-success" data-action="complete" data-id="${a.id}">Complete</button>
-                <button class="btn btn-sm btn-outline-danger" data-action="noshow" data-id="${a.id}">No-show</button>
-                <button class="btn btn-sm btn-outline-secondary" data-action="notes" data-id="${a.id}">Notes</button>
-              </div>
-            </td>
-          </tr>`;
-        });
-
-      scheduleBody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="5" class="small-muted">No appointments today</td></tr>';
-    }
-
-    // render queue
-    function renderQueue(){
-      // waiting queue: appointments with status 'waiting' or scheduled and datetime within near time
-      const now = Date.now();
-      const q = (appointments || []).filter(a => {
-        const st = ((a.status||'scheduled').toLowerCase());
-        if (st === 'waiting' || st === 'scheduled') {
-          return true;
-        }
-        return false;
-      }).slice(0,10);
-
-      queueCount.textContent = q.length || 0;
-      if (!q.length) { queueList.innerHTML = '<div class="small-muted">No patients waiting</div>'; return; }
-
-      queueList.innerHTML = q.map(a => {
-        const patient = a.patient_name || a.patient?.name || (patients.find(p=>String(p.id)===String(a.patient_id))?.name) || '—';
-        return `<div class="queue-item">
-          <div><strong>${escapeHtml(patient)}</strong><div class="mini-muted">${fmt(a.datetime)}</div></div>
-          <div>
-            <button class="btn btn-sm btn-outline-primary me-1" data-queue="call" data-id="${a.id}">Call</button>
-            <button class="btn btn-sm btn-outline-secondary" data-queue="view" data-id="${a.id}">View</button>
-          </div>
+        const u = JSON.parse(raw);
+        el.innerHTML = `<div class="dropdown">
+          <a class="dropdown-toggle d-flex align-items-center text-decoration-none" id="userDrop" data-bs-toggle="dropdown" href="#">
+            <div class="user-avatar me-2">${(u.name||u.email||'D').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}</div>
+            <span style="font-weight:600">${u.name||u.email}</span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDrop">
+            <li><a class="dropdown-item" href="#" id="navEdit">Edit profile</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="#" id="navSignOut">Sign out</a></li>
+          </ul>
         </div>`;
-      }).join('');
-    }
+        document.getElementById('navSignOut').addEventListener('click', (e)=>{ e.preventDefault(); localStorage.removeItem('hms_token'); localStorage.removeItem('hms_user'); window.location.href='index.html'; });
+        document.getElementById('navEdit').addEventListener('click', (e)=>{ e.preventDefault(); alert('Edit profile via admin or profile page.'); });
+      } catch(e){ el.innerHTML = '<a class="btn btn-sm btn-outline-primary" href="login.html">Login</a>'; }
+    })();
 
-    // populate patient selects
-    function populatePatientSelects(){
-      patientSelect.innerHTML = '';
-      medPatient.innerHTML = '';
-      if (!patients.length) {
-        patientSelect.innerHTML = '<option>No patients</option>';
-        medPatient.innerHTML = '<option>No patients</option>';
+    let currentUser = null;
+    async function loadDoctorProfile(){
+      currentUser = JSON.parse(localStorage.getItem('hms_user') || 'null');
+      if (!currentUser) {
+        document.getElementById('docName').textContent = 'Guest';
         return;
       }
-      patients.forEach(p => {
-        const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.name || p.email || ('Patient ' + p.id);
-        patientSelect.appendChild(opt);
-        const opt2 = opt.cloneNode(true); medPatient.appendChild(opt2);
-      });
-    }
-
-    // patient history
-    async function renderPatientHistoryPlaceholder(){
-      patientHistory.innerHTML = '<div class="small-muted">Select a patient to see history</div>';
-    }
-
-    // when patient selected, show history (appts and meds)
-    patientSelect.addEventListener('change', async function(){
-      const pid = this.value;
-      if (!pid) return;
+      document.getElementById('docName').textContent = currentUser.name || '';
+      document.getElementById('docEmail').textContent = currentUser.email || '';
+      document.getElementById('docAvatar').textContent = (currentUser.name||currentUser.email||'D').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase();
+      document.getElementById('docSignedIn').textContent = `Signed in as ${currentUser.name || currentUser.email}`;
+      // load doctor record (from /doctors) to get specialty/phone
       try {
-        // try direct endpoint for patient history
-        let history = null;
-        try {
-          history = await authFetch(`/patients/${pid}/history`); // optional endpoint
-        } catch(e){
-          // fallback: compile from appointments + medicines
-          const myAppts = (appointments || []).filter(a => String(a.patient_id) === String(pid) || (a.patient && String(a.patient.id) === String(pid)));
-          const myMeds = []; // if pharmacy orders endpoint exists, could filter it
-          history = { appointments: myAppts, medicines: myMeds };
+        const docs = await authFetch('/doctors');
+        const docRec = docs.find(d => (d.email && d.email.toLowerCase() === (currentUser.email||'').toLowerCase())) || docs.find(d => d.user_id === currentUser.id);
+        if (docRec) {
+          document.getElementById('docSpecialty').textContent = docRec.specialty || '';
+          document.getElementById('docPhone').textContent = docRec.phone || '';
+        } else {
+          document.getElementById('docSpecialty').textContent = '';
         }
-
-        // render
-        const appts = history.appointments || [];
-        const medlist = history.medicines || history.pharmacy || [];
-
-        patientHistory.innerHTML = `
-          <div><strong>Recent visits</strong></div>
-          <div class="mt-2">${ appts.length ? '<ul class="list-group list-group-flush">' + appts.slice(0,8).map(a=>`<li class="list-group-item"><strong>${escapeHtml(a.doctor_name||a.doctor?.name||'')}</strong> — ${fmt(a.datetime||a.date)}<div class="mini-muted">${escapeHtml(a.status||'')}</div><div>${escapeHtml(a.notes||'')}</div></li>`).join('') + '</ul>' : '<div class="small-muted">No visits</div>' }</div>
-          <div class="mt-3"><strong>Medicines</strong></div>
-          <div class="mt-2">${ medlist.length ? '<ul class="list-group list-group-flush">' + medlist.slice(0,8).map(m=>`<li class="list-group-item"><strong>${escapeHtml(m.name||m.title||'Medicine')}</strong> — ${escapeHtml(m.instructions||m.note||'')}</li>`).join('') + '</ul>' : '<div class="small-muted">No medicine records</div>' }</div>
-        `;
-      } catch(err){
-        console.error('history err', err);
-        patientHistory.innerHTML = '<div class="small-muted">Could not load history</div>';
-      }
-    });
-
-    // populate appt select for notes
-    function populateAppointmentsForNotes(){
-      apptForNotes.innerHTML = '';
-      if (!appointments.length) { apptForNotes.innerHTML = '<option>No appointments</option>'; return; }
-      const opts = appointments.map(a => {
-        const p = a.patient_name || a.patient?.name || (patients.find(p=>String(p.id)===String(a.patient_id))?.name) || ('Patient ' + (a.patient_id||''));
-        const txt = `${fmt(a.datetime||a.date)} — ${p} (${a.status||'scheduled'})`;
-        return `<option value="${a.id}">${escapeHtml(txt)}</option>`;
-      });
-      apptForNotes.innerHTML = opts.join('');
+      } catch(e){ console.warn('doctors fetch failed', e); }
+      await loadPatientsTreated();
+      await populateNotePatientSelect();
     }
 
-    // render medicines
-    function renderMedicines(){
-      medSelect.innerHTML = '';
-      if (!medicines.length) { medSelect.innerHTML = '<option>No medicines</option>'; return; }
-      medicines.forEach(m => {
-        const opt = document.createElement('option'); opt.value = m.id || m.name; opt.textContent = `${m.name || m.title} ${m.brand ? ' — ' + m.brand : ''}`;
-        medSelect.appendChild(opt);
-      });
+    // Patients being treated (simple approach: appointments assigned to doctor)
+    async function loadPatientsTreated(){
+      const el = document.getElementById('patientsTreatedList');
+      el.innerHTML = 'Loading...';
+      try {
+        const appts = await authFetch('/appointments').catch(()=>null);
+        if (!appts) { el.innerHTML = '<div class="small-muted">No appointments API available</div>'; return; }
+        // filter by doctor using email or id
+        const filtered = appts.filter(a => {
+          const u = currentUser;
+          return (a.doctor_email && u && a.doctor_email.toLowerCase() === (u.email||'').toLowerCase()) || (a.doctor_id && u && a.doctor_id === u.id);
+        });
+        if (!filtered.length) { el.innerHTML = '<div class="small-muted">No active patients</div>'; return; }
+        // map unique patients
+        const byPatient = {};
+        filtered.forEach(a => {
+          const pid = a.patient_id || (a.patient && a.patient.id);
+          if (!pid) return;
+          if (!byPatient[pid]) byPatient[pid] = { patient_id: pid, name: a.patient_name || a.patient?.name || `Patient ${pid}`, last_seen: a.scheduled_at || a.created_at };
+          else byPatient[pid].last_seen = Math.max(new Date(byPatient[pid].last_seen).getTime(), new Date(a.scheduled_at||a.created_at).getTime());
+        });
+        const list = Object.values(byPatient);
+        el.innerHTML = list.map(p => `<div class="d-flex justify-content-between align-items-center mb-2"><div><strong>${escapeHtml(p.name)}</strong><div class="small-muted">${new Date(p.last_seen).toLocaleString()}</div></div><div><button class="btn btn-sm btn-outline-primary selectPatientBtn" data-id="${p.patient_id}" data-name="${escapeHtml(p.name)}">Open</button></div></div>`).join('');
+      } catch(e) { el.innerHTML = '<div class="small-muted">Failed to load patients</div>'; console.error(e); }
     }
 
-    // render HR messages
-    function renderHR(){
-      hrList.innerHTML = '';
-      if (!hrMessages.length) { hrList.innerHTML = '<div class="small-muted">No messages</div>'; return; }
-      hrList.innerHTML = hrMessages.slice(0,6).map(m => `<div class="mb-2"><strong>${escapeHtml(m.title||'Message')}</strong><div class="mini-muted">${fmt(m.created_at||m.createdAt)}</div><div>${escapeHtml(m.body||m.text||'')}</div></div>`).join('');
+    // populate patient selects used by doctor for notes/issue
+    async function populateNotePatientSelect(){
+      const sel = document.getElementById('notePatientSelect');
+      sel.innerHTML = '<option>Loading...</option>';
+      try {
+        const pts = await authFetch('/patients');
+        sel.innerHTML = pts.map(p => `<option value="${p.id}">${escapeHtml(p.name||p.email)} (${p.id})</option>`).join('');
+      } catch(e) { sel.innerHTML = '<option>Error</option>'; console.error(e); }
     }
 
-    // appointment action handlers (delegate)
-    document.body.addEventListener('click', async function(ev){
-      const btn = ev.target.closest('button[data-action]');
-      if (!btn) return;
-      const action = btn.dataset.action;
-      const id = btn.dataset.id;
-      if (!id) return;
-
+    // clicking "Open" on a patient from list
+    document.body.addEventListener('click', async (ev)=> {
+      const b = ev.target.closest('.selectPatientBtn');
+      if (!b) return;
+      const pid = b.dataset.id;
+      const name = b.dataset.name;
+      // fetch patient details
       try {
-        if (action === 'start') {
-          await authFetch('/appointments/' + id, { method: 'PUT', body: JSON.stringify({ status: 'in-progress' }) });
-        } else if (action === 'complete') {
-          await authFetch('/appointments/' + id, { method: 'PUT', body: JSON.stringify({ status: 'completed' }) });
-        } else if (action === 'noshow') {
-          await authFetch('/appointments/' + id, { method: 'PUT', body: JSON.stringify({ status: 'no-show' }) });
-        } else if (action === 'notes') {
-          // select in notes area
-          apptForNotes.value = id;
-          const ap = appointments.find(x=>String(x.id)===String(id));
-          diagNotes.value = ap && (ap.notes || '') || '';
-          diagMsg.innerHTML = '<div class="small-muted">Editing notes for selected appointment</div>';
-        }
-        // refresh local state
-        const fresh = await authFetch('/appointments');
-        appointments = Array.isArray(fresh) ? fresh : (fresh.data || []);
-        renderSchedule(searchBox.value);
-        renderQueue();
-        populateAppointmentsForNotes();
-      } catch(err){
-        console.error('action err', err);
-        alert('Action failed: ' + (err.message || (err.body && err.body.error) || 'server error'));
+        const p = await authFetch(`/patients/${pid}`);
+        showSelectedPatient(p);
+      } catch(e) {
+        alert('Failed to load patient details'); console.error(e);
       }
     });
 
-    // call/cue actions on queue
-    document.body.addEventListener('click', async function(ev){
-      const btn = ev.target.closest('button[data-queue]');
-      if (!btn) return;
-      const id = btn.dataset.id;
-      const cmd = btn.dataset.queue;
-      if (cmd === 'call') {
-        alert('Calling patient to room');
-        // optionally update appointment status
-        try { await authFetch('/appointments/' + id, { method: 'PUT', body: JSON.stringify({ status: 'waiting' }) }); } catch(e){ console.warn(e); }
-      } else if (cmd === 'view') {
-        // focus on appointment in schedule
-        const ap = appointments.find(a=>String(a.id)===String(id));
-        if (!ap) return alert('Not found');
-        apptForNotes.value = ap.id;
-        diagNotes.value = ap.notes || '';
-      }
-      const fresh = await authFetch('/appointments').catch(()=>null);
-      if (fresh) { appointments = Array.isArray(fresh) ? fresh : (fresh.data||[]); renderQueue(); renderSchedule(); populateAppointmentsForNotes(); }
-    });
+    function showSelectedPatient(p){
+      document.getElementById('selectedPatientCard').innerHTML = `<div><strong>${escapeHtml(p.name)}</strong> <div class="small-muted">Age: ${p.age || '-'} • Phone: ${escapeHtml(p.phone||'')}</div> <div class="mt-2">${escapeHtml(p.address||'')}</div></div>`;
+      document.getElementById('patientActions').style.display = 'block';
+      document.getElementById('notePatientSelect').value = p.id;
+      loadPatientMedicineHistory(p.id);
+    }
 
-    // save diagnosis note
-    saveDiagBtn.addEventListener('click', async function(){
-      const apptId = apptForNotes.value;
-      const text = diagNotes.value.trim();
-      if (!apptId) return alert('Choose an appointment');
-      if (!text) { diagMsg.innerHTML = '<div class="alert alert-warning small">Notes are empty</div>'; return; }
-      saveDiagBtn.disabled = true; saveDiagBtn.textContent = 'Saving...';
+    async function loadPatientMedicineHistory(patientId){
+      const el = document.getElementById('patMedHistory');
+      el.innerHTML = 'Loading...';
       try {
-        // Preferred: POST /api/diagnoses
-        try {
-          const payload = { appointment_id: apptId, doctor_id: doctor.id, notes: text, created_at: new Date().toISOString() };
-          const res = await authFetch('/diagnoses', { method: 'POST', body: JSON.stringify(payload) });
-          diagMsg.innerHTML = '<div class="alert alert-success small">Saved diagnosis</div>';
-        } catch(e) {
-          // fallback: attach notes to appointment via PUT
-          await authFetch('/appointments/' + apptId, { method: 'PUT', body: JSON.stringify({ notes: text }) });
-          diagMsg.innerHTML = '<div class="alert alert-success small">Saved to appointment notes</div>';
-        }
-        // refresh
-        const fresh = await authFetch('/appointments');
-        appointments = Array.isArray(fresh) ? fresh : (fresh.data || []);
-        populateAppointmentsForNotes();
-        renderSchedule(searchBox.value);
-      } catch(err){
-        console.error('save diag err', err);
-        diagMsg.innerHTML = '<div class="alert alert-danger small">Save failed</div>';
-      } finally {
-        saveDiagBtn.disabled = false; saveDiagBtn.textContent = 'Save Note';
-      }
-    });
+        const issues = await authFetch('/medicine_issues');
+        const filtered = (Array.isArray(issues) ? issues : (issues.data||[])).filter(i => i.patient_id === Number(patientId));
+        if (!filtered.length) { el.innerHTML = '<div class="small-muted">No medicine history for this patient</div>'; return; }
+        el.innerHTML = filtered.map(i => `<div class="mb-2"><strong>${escapeHtml(i.medicine_name || i.medicine?.name)}</strong> — ${i.quantity || 0} <div class="small-muted">${new Date(i.issued_at||i.created_at).toLocaleString()}</div><div class="small-muted">By: ${escapeHtml(i.issued_by_name||'')}</div></div>`).join('');
+      } catch(e) { el.innerHTML = '<div class="small-muted">Failed to load</div>'; console.error(e); }
+    }
 
-    // mark complete quick
-    markCompleteBtn.addEventListener('click', async function(){
-      const apptId = apptForNotes.value;
-      if (!apptId) return alert('Choose appointment');
+    // Issue medicine UI (simple prompt flow)
+    document.getElementById('issueMedBtn').addEventListener('click', async ()=> {
+      const pid = document.getElementById('notePatientSelect').value;
+      if (!pid) return alert('Select patient first');
       try {
-        await authFetch('/appointments/' + apptId, { method: 'PUT', body: JSON.stringify({ status: 'completed' }) });
-        const fresh = await authFetch('/appointments');
-        appointments = Array.isArray(fresh) ? fresh : (fresh.data || []);
-        renderSchedule(); renderQueue(); populateAppointmentsForNotes();
-      } catch(err){ console.error(err); alert('Could not mark complete'); }
+        // get medicines list
+        const meds = await authFetch('/medicines');
+        if (!meds || meds.length===0) return alert('No medicines available');
+        const med = meds[0]; // default pick first; you can extend to show modal
+        const qty = Number(prompt(`Enter quantity to issue for ${med.name} (available ${med.quantity||0})`, '1') || 0);
+        if (!qty || qty <= 0) return;
+        await authFetch('/medicine_issues', { method: 'POST', body: JSON.stringify({ medicine_id: med.id, patient_id: Number(pid), quantity: qty, instructions: 'Issued by doctor' }) });
+        alert('Medicine issued');
+        loadPatientMedicineHistory(pid);
+      } catch(e) { alert('Issue failed'); console.error(e); }
     });
 
-    // toggle inpatient flag
-    toggleInpatientBtn.addEventListener('click', async function(){
-      const apptId = apptForNotes.value;
-      if (!apptId) return alert('Choose appointment');
+    // Mark treated (simple simulated endpoint that may not exist)
+    document.getElementById('markTreatedBtn').addEventListener('click', async ()=> {
+      const pid = document.getElementById('notePatientSelect').value;
+      if (!pid) return alert('Select patient first');
       try {
-        const ap = appointments.find(a=>String(a.id)===String(apptId));
-        const newVal = !ap.inpatient;
-        await authFetch('/appointments/' + apptId, { method: 'PUT', body: JSON.stringify({ inpatient: newVal }) });
-        const fresh = await authFetch('/appointments');
-        appointments = Array.isArray(fresh) ? fresh : (fresh.data || []);
-        populateAppointmentsForNotes(); renderSchedule();
-      } catch(err){ console.error(err); alert('Could not toggle inpatient'); }
+        // If you have an appointments API, update appointment status. Here we just add a patient_history entry
+        await authFetch('/patient_history', { method: 'POST', body: JSON.stringify({ patient_id: Number(pid), record_type: 'treatment', title: 'Marked treated', body: `Treated by Dr. ${currentUser.name || currentUser.email}` }) });
+        alert('Patient marked as treated (note added)');
+      } catch(e) { alert('Operation failed'); console.error(e); }
     });
 
-    // issue medicine
-    issueMedBtn.addEventListener('click', async function(){
-      const pid = medPatient.value; const mid = medSelect.value;
-      if (!pid || !mid) { medMsg.innerHTML = '<div class="alert alert-warning small">Select patient & medicine</div>'; return; }
-      issueMedBtn.disabled = true; issueMedBtn.textContent = 'Issuing...';
+    // Doctor: add note form
+    document.getElementById('doctorNoteForm').addEventListener('submit', async (ev)=> {
+      ev.preventDefault();
+      const pid = Number(document.getElementById('notePatientSelect').value);
+      const title = document.getElementById('noteTitle').value.trim();
+      const body = document.getElementById('noteBody').value.trim();
+      if (!pid || (!title && !body)) return alert('Provide patient and note content');
       try {
-        // Try POST /pharmacy_orders or /medicines/issue
-        const payload = { patient_id: pid, medicine_id: mid, notes: medNote.value || null, issued_by: doctor.id, created_at: new Date().toISOString() };
-        try {
-          await authFetch('/pharmacy_orders', { method: 'POST', body: JSON.stringify(payload) });
-        } catch(e) {
-          // fallback: /medicines/issue
-          await authFetch('/medicines/issue', { method: 'POST', body: JSON.stringify(payload) });
-        }
-        medMsg.innerHTML = '<div class="alert alert-success small">Medicine issued</div>';
-      } catch(err){
-        console.error('issue med err', err);
-        medMsg.innerHTML = '<div class="alert alert-danger small">Issue failed</div>';
-      } finally {
-        issueMedBtn.disabled = false; issueMedBtn.textContent = 'Issue Medicine';
-      }
+        await authFetch('/patient_history', { method: 'POST', body: JSON.stringify({ patient_id: pid, record_type: 'doctor_note', title, body }) });
+        alert('Note added');
+        document.getElementById('doctorNoteForm').reset();
+      } catch(e) { alert('Save failed'); console.error(e); }
     });
 
-    // HR post
-    postHrBtn.addEventListener('click', async function(){
-      const text = hrText.value.trim();
-      if (!text) { hrMsg.innerHTML = '<div class="alert alert-warning small">Message empty</div>'; return; }
-      postHrBtn.disabled = true; postHrBtn.textContent = 'Posting...';
-      try {
-        await authFetch('/hr_messages', { method: 'POST', body: JSON.stringify({ title: 'From Dr. ' + (doctor.name||''), body: text, author_id: doctor.id }) });
-        hrMsg.innerHTML = '<div class="alert alert-success small">Posted</div>';
-        // refresh
-        const fresh = await authFetch('/hr_messages').catch(()=>null);
-        if (fresh) hrMessages = Array.isArray(fresh) ? fresh : (fresh.data || []);
-        renderHR();
-        hrText.value = '';
-      } catch(err){
-        console.error('post hr err', err);
-        hrMsg.innerHTML = '<div class="alert alert-danger small">Post failed</div>';
-      } finally {
-        postHrBtn.disabled = false; postHrBtn.textContent = 'Post Message';
-      }
-    });
+    document.getElementById('docSignOut').addEventListener('click', ()=> { localStorage.removeItem('hms_token'); localStorage.removeItem('hms_user'); window.location.href='index.html'; });
 
-    // sign out button
-    signOutBtn.addEventListener('click', function(){
-      localStorage.removeItem('hms_token'); localStorage.removeItem('hms_user');
-      window.location.href = 'dashboard.html';
-    });
+    function escapeHtml(s){ if (s===null || s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-    // refresh data periodically (every 45s)
-    setInterval(async ()=> {
-      try {
-        const fresh = await authFetch('/appointments').catch(()=>null);
-        if (fresh) appointments = Array.isArray(fresh) ? fresh : (fresh.data || []);
-        renderSchedule(searchBox.value); renderQueue(); populateAppointmentsForNotes();
-      } catch(e){ console.warn('auto-refresh err', e); }
-    }, 45000);
-
-    // start
-    init();
-
-  })();
+    // init
+    loadDoctorProfile();
   </script>
-  <script>
-(function(){
-  // populate doctor dropdown from localStorage
-  const docUserRaw = localStorage.getItem('hms_user');
-  let docUser = null;
-  try { docUser = JSON.parse(docUserRaw); } catch(e){}
-  const docNameEl = document.getElementById('docName');
-  const docAvatarEl = document.getElementById('docAvatar');
-  const signOutLink = document.getElementById('signOutLink');
-  const editProfileLink = document.getElementById('editProfileLink');
-
-  function initials(name){
-    if(!name) return 'D';
-    return name.split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase();
-  }
-
-  if (docUser) {
-    docNameEl.textContent = docUser.name || docUser.email || 'Doctor';
-    docAvatarEl.textContent = initials(docUser.name || docUser.email);
-  } else {
-    // If no user, send to login
-    window.location.href = 'login.html';
-  }
-
-  // sign out -> clear token & user, go to dashboard (as you requested)
-  signOutLink.addEventListener('click', function(e){
-    e.preventDefault();
-    localStorage.removeItem('hms_token');
-    localStorage.removeItem('hms_user');
-    // optional: hit backend logout endpoint if you have one
-    window.location.href = 'dashboard.html';
-  });
-
-  // Edit profile: route to a profile edit page or open modal (we'll route to doctors.html#edit)
-  editProfileLink.addEventListener('click', function(e){
-    e.preventDefault();
-    // if you later implement a modal or page, route there; for now, open doctors.html#edit
-    // You can adapt to open a modal: document.getElementById('editDoctorModal').show()
-    window.location.href = 'doctors.html#edit';
-  });
-
-})();
-</script>
-
 </body>
 </html>
