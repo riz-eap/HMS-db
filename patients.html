@@ -1,1 +1,54 @@
-<!doctype html><html><body><h1>Patients</h1></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Patients — HMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg"><div class="container"><a class="navbar-brand" href="index.html">HMS</a></div></nav>
+
+  <main class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4>Patients</h4>
+      <div>
+        <a class="btn btn-primary btn-sm" id="addPatientTop">Add Patient</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover" id="patientsListTable">
+            <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Phone</th><th>Actions</th></tr></thead>
+            <tbody id="patientsListTbody"><tr><td colspan="5">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer"><div class="container">© <span id="yearPatients"></span> HMS</div></footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    document.getElementById('yearPatients').textContent = new Date().getFullYear();
+
+    // Populate table using app.js api helper
+    (async function(){
+      const tbody = document.getElementById('patientsListTbody');
+      try {
+        if (typeof api === 'function') {
+          const patients = await api('/patients').catch(()=>[]);
+          if (!patients || !patients.length) { tbody.innerHTML = '<tr><td colspan="5">No patients</td></tr>'; return; }
+          tbody.innerHTML = patients.map(p => `<tr><td>${p.id}</td><td>${p.name}</td><td>${p.age||''}</td><td>${p.phone||''}</td><td><a class="btn btn-sm btn-outline-primary" href="patients.html">View</a></td></tr>`).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="5">Client API not available</td></tr>';
+        }
+      } catch(e) { console.error(e); tbody.innerHTML = '<tr><td colspan="5">Error loading</td></tr>'; }
+    })();
+  </script>
+</body>
+</html>
