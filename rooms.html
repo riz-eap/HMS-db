@@ -12,6 +12,35 @@
     .user-avatar { width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:var(--accent);font-weight:700; }
     .small-muted { color:#6b7280; font-size:.9rem; }
   </style>
+  <!-- add near top of each page (once) -->
+<script>
+  // config.js (global)
+  // Production backend URL (use your render backend URL). For local dev replace accordingly.
+  window.HMS = window.HMS || {};
+  // Use absolute backend URL in production:
+  window.HMS.API_BASE = window.HMS.API_BASE || 'https://hms-backend-yqjj.onrender.com/api';
+
+  // authFetch will be used by all pages to attach token & handle JSON
+  window.HMS.authFetch = async function(path, opts = {}) {
+    const base = window.HMS.API_BASE.replace(/\/$/,'');
+    const url = path.startsWith('http') ? path : `${base}/${path.replace(/^\/+/,'')}`;
+    const token = localStorage.getItem('hms_token');
+    const defaultHeaders = {'Content-Type':'application/json'};
+    opts.headers = Object.assign(defaultHeaders, opts.headers || {});
+    if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+    const res = await fetch(url, opts);
+    const text = await res.text().catch(()=>null);
+    let body = null;
+    try { body = text ? JSON.parse(text) : null; } catch(e) { body = text; }
+    if (!res.ok) {
+      const err = new Error(body && (body.error || body.message) ? (body.error || body.message) : res.statusText);
+      err.status = res.status; err.body = body;
+      throw err;
+    }
+    return body;
+  };
+</script>
+
 </head>
 <body>
   <nav class="navbar navbar-expand-lg">
