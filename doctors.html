@@ -30,20 +30,21 @@
 <body>
   <!-- NAV -->
   <nav class="navbar navbar-expand-lg">
-    <div class="container">
-      <a class="navbar-brand" href="index.html">HMS</a>
+    <div class="d-flex align-items-center gap-3">
+  <!-- Doctor dropdown -->
+  <div class="dropdown">
+    <a class="d-flex align-items-center text-decoration-none dropdown-toggle" id="docDropdown" data-bs-toggle="dropdown" href="#" aria-expanded="false" style="gap:.6rem;">
+      <div id="docAvatar" style="width:40px;height:40px;border-radius:50%;background:#fdece8;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent)"></div>
+      <div id="docName" style="font-weight:600;color:inherit"></div>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="docDropdown">
+      <li><a class="dropdown-item" href="#" id="editProfileLink">Edit profile</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item text-danger" href="#" id="signOutLink">Sign out</a></li>
+    </ul>
+  </div>
+</div>
 
-      <div class="collapse navbar-collapse" id="navMenu">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></li>
-        </ul>
-      </div>
-
-      <div class="d-flex align-items-center gap-3">
-        <div id="signedInDoctor" class="user-pill"></div>
-        <button id="doctorSignOut" class="btn btn-outline-secondary btn-sm">Sign out</button>
-      </div>
-    </div>
   </nav>
 
   <main class="container mt-4 mb-5">
@@ -616,5 +617,49 @@
 
   })();
   </script>
+  <script>
+(function(){
+  // populate doctor dropdown from localStorage
+  const docUserRaw = localStorage.getItem('hms_user');
+  let docUser = null;
+  try { docUser = JSON.parse(docUserRaw); } catch(e){}
+  const docNameEl = document.getElementById('docName');
+  const docAvatarEl = document.getElementById('docAvatar');
+  const signOutLink = document.getElementById('signOutLink');
+  const editProfileLink = document.getElementById('editProfileLink');
+
+  function initials(name){
+    if(!name) return 'D';
+    return name.split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase();
+  }
+
+  if (docUser) {
+    docNameEl.textContent = docUser.name || docUser.email || 'Doctor';
+    docAvatarEl.textContent = initials(docUser.name || docUser.email);
+  } else {
+    // If no user, send to login
+    window.location.href = 'login.html';
+  }
+
+  // sign out -> clear token & user, go to dashboard (as you requested)
+  signOutLink.addEventListener('click', function(e){
+    e.preventDefault();
+    localStorage.removeItem('hms_token');
+    localStorage.removeItem('hms_user');
+    // optional: hit backend logout endpoint if you have one
+    window.location.href = 'dashboard.html';
+  });
+
+  // Edit profile: route to a profile edit page or open modal (we'll route to doctors.html#edit)
+  editProfileLink.addEventListener('click', function(e){
+    e.preventDefault();
+    // if you later implement a modal or page, route there; for now, open doctors.html#edit
+    // You can adapt to open a modal: document.getElementById('editDoctorModal').show()
+    window.location.href = 'doctors.html#edit';
+  });
+
+})();
+</script>
+
 </body>
 </html>
