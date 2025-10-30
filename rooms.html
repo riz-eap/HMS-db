@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Rooms — HMS</title>
 
-  <!-- Bootstrap + site CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="assets/css/style.css" />
 
   <style>
-    .section-card { border-radius:12px; padding:18px; background:#fff; box-shadow:0 6px 18px rgba(2,6,23,0.04); }
-    .user-avatar { width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:var(--accent);font-weight:700; }
-    .small-muted { color:#6b7280; }
-    .table-sm td, .table-sm th { vertical-align: middle; }
+    .section-card{border-radius:12px;padding:18px;background:#fff;box-shadow:0 6px 18px rgba(2,6,23,0.04);}
+    .user-avatar{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;font-weight:700;}
+    .small-muted{color:#6b7280;}
+    .table-sm td,.table-sm th{vertical-align:middle;}
   </style>
 
-  <!-- Global config + authFetch (include on every page) -->
+  <!-- Global config + authFetch -->
   <script>
     window.HMS = window.HMS || {};
+    // Set your backend base URL here if different:
     window.HMS.API_BASE = window.HMS.API_BASE || 'https://hms-backend-yqjj.onrender.com/api';
     window.HMS.authFetch = window.HMS.authFetch || (async function(path, opts = {}){
       const base = window.HMS.API_BASE.replace(/\/$/,'');
@@ -36,7 +36,7 @@
   </script>
 </head>
 <body>
-  <!-- NAVBAR -->
+  <!-- NAV -->
   <nav class="navbar navbar-expand-lg">
     <div class="container">
       <a class="navbar-brand" href="index.html">HMS</a>
@@ -53,8 +53,7 @@
           <li class="nav-item"><a class="nav-link" href="doctors.html">Doctors</a></li>
           <li class="nav-item"><a class="nav-link" href="admin.html">Admin</a></li>
         </ul>
-
-        <div class="d-flex align-items-center ms-auto" id="navUserPill"></div>
+        <div id="navUserPill" class="d-flex align-items-center ms-auto"></div>
       </div>
     </div>
   </nav>
@@ -66,9 +65,7 @@
         <h4 class="mb-0">Room Management</h4>
         <div class="small-muted">Create rooms, assign patients, view occupancy</div>
       </div>
-      <div>
-        <button id="refreshBtn" class="btn btn-outline-secondary btn-sm">Refresh</button>
-      </div>
+      <div><button id="refreshBtn" class="btn btn-outline-secondary btn-sm">Refresh</button></div>
     </div>
 
     <div class="row g-4">
@@ -115,7 +112,7 @@
             <div class="mb-2"><label class="form-label small">Reason</label><input id="assignReason" class="form-control form-control-sm"/></div>
             <div class="d-grid"><button id="assignBtn" class="btn btn-success btn-sm">Assign</button></div>
           </form>
-          <div class="mt-2 small-muted">Vacate rooms with the "Vacate" action in the table.</div>
+          <div class="mt-2 small-muted">Vacate rooms using the Vacate action in the table.</div>
         </div>
       </div>
     </div>
@@ -127,8 +124,9 @@
 
   <script>
     document.getElementById('yearRooms').textContent = new Date().getFullYear();
+    const authFetch = window.HMS.authFetch;
 
-    // NAV user pill
+    // populate nav user
     (function populateNavUser(){
       const el = document.getElementById('navUserPill');
       const raw = localStorage.getItem('hms_user');
@@ -138,9 +136,7 @@
         el.innerHTML = `
           <div class="dropdown">
             <a class="dropdown-toggle d-flex align-items-center text-decoration-none" id="userDrop" data-bs-toggle="dropdown" href="#">
-              <div style="width:36px;height:36px;border-radius:50%;background:#eef2ff;display:inline-flex;align-items:center;justify-content:center;margin-right:.6rem;font-weight:700;">
-                ${(u.name||u.email||'U').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}
-              </div>
+              <div class="user-avatar me-2">${(u.name||u.email||'U').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}</div>
               <span style="font-weight:600">${u.name||u.email}</span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDrop">
@@ -150,19 +146,16 @@
             </ul>
           </div>`;
         document.getElementById('signOutLink').addEventListener('click', (e)=>{ e.preventDefault(); localStorage.removeItem('hms_token'); localStorage.removeItem('hms_user'); window.location.href='index.html'; });
-        document.getElementById('viewProfileLink').addEventListener('click', (e)=>{ e.preventDefault(); const role = (u.role||'').toLowerCase(); if(role.includes('doctor')) window.location.href='doctors.html#edit'; else if(role.includes('patient')) window.location.href='patients.html#edit'; else window.location.href='admin.html#edit'; });
+        document.getElementById('viewProfileLink').addEventListener('click', (e)=>{ e.preventDefault(); const u2 = JSON.parse(raw); const role = (u2.role||'').toLowerCase(); if(role.includes('doctor')) window.location.href='doctors.html#edit'; else if(role.includes('patient')) window.location.href='patients.html#edit'; else window.location.href='admin.html#edit'; });
       } catch(e){ el.innerHTML = '<a class="btn btn-sm btn-outline-primary" href="login.html">Login</a>'; }
     })();
 
-    const authFetch = window.HMS.authFetch;
-
-    // DOM refs
+    // Elements
     const roomsTableBody = document.getElementById('roomsTable').querySelector('tbody');
     const assignmentsList = document.getElementById('assignmentsList');
     const assignRoomSelect = document.getElementById('assignRoomSelect');
     const assignPatientSelect = document.getElementById('assignPatientSelect');
 
-    // load rooms
     async function loadRooms(){
       roomsTableBody.innerHTML = '<tr><td colspan="6" class="small-muted">Loading...</td></tr>';
       try {
@@ -190,7 +183,6 @@
       }
     }
 
-    // load assignments
     async function loadAssignments(){
       assignmentsList.innerHTML = 'Loading...';
       try {
@@ -203,7 +195,6 @@
       }
     }
 
-    // load patients for select
     async function loadPatientsSelect(){
       assignPatientSelect.innerHTML = '<option>Loading patients...</option>';
       try {
@@ -213,7 +204,7 @@
       } catch(e){ assignPatientSelect.innerHTML = '<option>Error loading</option>'; console.error(e); }
     }
 
-    // create room
+    // Create room
     document.getElementById('createRoomForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
       const btn = document.getElementById('createRoomBtn');
@@ -222,24 +213,23 @@
         const payload = { room_number: document.getElementById('roomNumber').value.trim(), ward: document.getElementById('roomWard').value.trim(), bed_label: document.getElementById('bedLabel').value.trim(), room_type: document.getElementById('roomType').value };
         await authFetch('/rooms', { method: 'POST', body: JSON.stringify(payload) });
         await loadRooms(); document.getElementById('createRoomForm').reset();
-      } catch(e){ alert('Create failed'); console.error(e); }
+      } catch(e){ alert('Create failed: ' + (e.message || e)); console.error(e); }
       btn.disabled = false; btn.textContent = 'Create Room';
     });
 
-    // assign room form
+    // Assign room
     document.getElementById('assignForm').addEventListener('submit', async (ev) => {
       ev.preventDefault();
-      const btn = document.getElementById('assignBtn');
-      btn.disabled = true; btn.textContent = 'Assigning...';
+      const btn = document.getElementById('assignBtn'); btn.disabled = true; btn.textContent = 'Assigning...';
       try {
         const payload = { room_id: assignRoomSelect.value, patient_id: assignPatientSelect.value, reason: document.getElementById('assignReason').value || null };
         await authFetch('/room_assignments', { method: 'POST', body: JSON.stringify(payload) });
         await loadRooms(); await loadAssignments(); document.getElementById('assignForm').reset();
-      } catch(e){ alert('Assign failed: ' + (e.message||e)); console.error(e); }
+      } catch(e){ alert('Assign failed: ' + (e.message || e)); console.error(e); }
       btn.disabled = false; btn.textContent = 'Assign';
     });
 
-    // delegated click handlers
+    // delegated actions
     document.body.addEventListener('click', async (ev) => {
       const vac = ev.target.closest('.vacateBtn');
       if (vac) {
@@ -248,7 +238,7 @@
           const id = vac.dataset.id;
           await authFetch(`/rooms/${id}/vacate`, { method: 'POST' });
           await loadRooms(); await loadAssignments();
-        } catch(e){ alert('Vacate failed'); console.error(e); }
+        } catch(e){ alert('Vacate failed: ' + (e.message || e)); console.error(e); }
       }
       const quick = ev.target.closest('.assignQuickBtn');
       if (quick) {
@@ -257,7 +247,6 @@
       }
     });
 
-    // helpers
     function escapeHtml(s){ if (s===null || s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     document.getElementById('refreshBtn').addEventListener('click', () => { loadRooms(); loadAssignments(); loadPatientsSelect(); });
