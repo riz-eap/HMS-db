@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Pharmacy — HMS</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="assets/css/style.css"/>
+  <style>.section-card{border-radius:12px;padding:18px;background:#fff;box-shadow:0 6px 18px rgba(2,6,23,0.04);} .user-avatar{width:36px;height:36px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#eef2ff;color:var(--accent);font-weight:700;}</style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg"><div class="container"><a class="navbar-brand" href="index.html">HMS</a><div id="userArea" class="d-flex align-items-center ms-auto"></div></div></nav>
+
+  <main class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div><h4>Medicines & Pharmacy</h4><div class="small-muted">Inventory and medicine issuance</div></div>
+      <div><button id="refreshMed" class="btn btn-outline-secondary btn-sm">Refresh</button></div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="section-card">
+          <h6>Inventory</h6>
+          <div class="table-responsive mt-3"><table class="table table-sm" id="medTable"><thead><tr><th>Medicine</th><th>Batch</th><th>Qty</th><th>Expiry</th><th>Actions</th></tr></thead><tbody><tr><td colspan="5" class="small-muted">Loading...</td></tr></tbody></table></div>
+        </div>
+
+        <div class="section-card mt-3">
+          <h6>Issued Medicines</h6>
+          <div id="issuedList" class="mt-2 small-muted">Loading...</div>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="section-card">
+          <h6>Add Medicine</h6>
+          <form id="addMedForm">
+            <div class="mb-2"><label class="form-label small">Name</label><input id="medName" class="form-control form-control-sm" required/></div>
+            <div class="mb-2"><label class="form-label small">Batch</label><input id="medBatch" class="form-control form-control-sm"/></div>
+            <div class="mb-2"><label class="form-label small">Quantity</label><input id="medQty" type="number" class="form-control form-control-sm" value="0"/></div>
+            <div class="mb-2"><label class="form-label small">Expiry</label><input id="medExpiry" type="date" class="form-control form-control-sm"/></div>
+            <div class="d-grid"><button id="addMedBtn" class="btn btn-primary btn-sm">Add Medicine</button></div>
+          </form>
+        </div>
+
+        <div class="section-card mt-3">
+          <h6>Issue Medicine</h6>
+          <form id="issueForm">
+            <div class="mb-2"><label class="form-label small">Select Medicine</label><select id="issueMedSelect" class="form-select form-select-sm"></select></div>
+            <div class="mb-2"><label class="form-label small">Select Patient</label><select id="issuePatientSelect" class="form-select form-select-sm"></select></div>
+            <div class="mb-2"><label class="form-label small">Quantity</label><input id="issueQty" type="number" class="form-control form-control-sm" value="1"/></div>
+            <div class="mb-2"><label class="form-label small">Instructions</label><input id="issueInst" class="form-control form-control-sm"/></div>
+            <div class="d-grid"><button id="issueBtn" class="btn btn-success btn-sm">Issue</button></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer"><div class="container">© <span id="yearMed"></span> HMS</div></footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.getElementById('yearMed').textContent = new Date().getFullYear();
+    const API_BASE = '/api';
+    function showUser(){ const a=document.getElementById('userArea'); const raw=localStorage.getItem('hms_user'); if(!raw){ a.innerHTML='<a class="btn btn-sm btn-outline-primary" href="login.html">Login</a>'; return;} const u=JSON.parse(raw); a.innerHTML=`<div class="d-flex align-items-center" style="gap:.5rem"><div class="user-avatar">${(u.name||u.email||'U').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}</div><div><div style="font-weight:600">${u.name||u.email}</div><div class="small-muted" style="font-size:.8rem">Signed in</div></div></div>`;}
+    function authFetch(path, opts={}){ const url = path.startsWith('http')?path:API_BASE.replace(/\/$/,'')+'/'+path.replace(/^\/+/,''); const headers=Object.assign({'Content-Type':'application/json'}, opts.headers||{}); const token=localStorage.getItem('hms_token'); if(token) headers['Authorization']='Bearer '+token; return fetch(url, Object.assign({}, opts, { headers })).then(async res=>{ const t=await res.text().catch(()=>null); try{ const body = t?JSON.parse(t):null; if(!res.ok){ const e=new Error(body&&(body.error||body.message)?(body.error||body.message):res.statusText); e.status=res.status; e.body=body; throw e;} return body;}catch(e){ throw e; } });}
+
+    const medTableBody = document.getElementById('medTable').querySelector('tbody');
+    const issueMedSelect = document.getElementById('issueMedSelect');
+    const issuePatientSelect = document.getElementById('issuePatientSelect');
+    const issuedList = document.getElementById('issuedList');
+
+    async function loadMeds(){
+      medTableBody.innerHTML = '<tr><td colspan="5" class="small-muted">Loading...</td></tr>';
+      try {
+        const meds = await authFetch('/medicines').catch(()=>[]);
+        if(!meds || meds.length===0){ medTableBody.innerHTML = '<tr><td colspan="5" class="small-muted">No medicines</td></tr>'; return; }
+        medTableBody.innerHTML = meds.map(m => `<tr><td>${escapeHtml(m.name)}</td><td>${escapeHtml(m.batch_no||m.batch)}</td><td>${escapeHtml(String(m.quantity||0))}</td><td>${m.expiry_date?new Date(m.expiry_date).toLocaleDateString() : ''}</td><td><button class="btn btn-sm btn-outline-danger delMed" data-id="${m.id}">Delete</button></td></tr>`).join('');
+        issueMedSelect.innerHTML = meds.map(m=>`<option value="${m.id}">${escapeHtml(m.name)} (${m.quantity||0})</option>`).join('');
+      } catch(e){ medTableBody.innerHTML = '<tr><td colspan="5" class="small-muted">Failed to load</td></tr>'; console.error(e); }
+    }
+
+    async function loadPatientsSelect() {
+      issuePatientSelect.innerHTML = '<option>Loading patients...</option>';
+      try {
+        const pts = await authFetch('/patients').catch(()=>[]);
+        issuePatientSelect.innerHTML = pts && pts.length ? pts.map(p=>`<option value="${p.id}">${escapeHtml(p.name||p.email)} (${p.id})</option>`).join('') : '<option>No patients</option>';
+      } catch(e){ issuePatientSelect.innerHTML = '<option>Error</option>'; console.error(e); }
+    }
+
+    async function loadIssued(){
+      issuedList.innerHTML = 'Loading...';
+      try {
+        const issues = await authFetch('/medicine_issues').catch(()=>[]);
+        if(!issues || issues.length===0){ issuedList.innerHTML = '<div class="small-muted">No records</div>'; return; }
+        issuedList.innerHTML = issues.slice(0,30).map(i => `<div class="mb-2"><strong>${escapeHtml(i.medicine_name||i.medicine?.name||'')}</strong> → ${escapeHtml(i.quantity||'')} to ${escapeHtml(i.patient_name || i.patient?.name || '')} <div class="small-muted">${new Date(i.issued_at||i.created_at).toLocaleString()}</div></div>`).join('');
+      } catch(e){ issuedList.innerHTML = '<div class="small-muted">Failed to load</div>'; console.error(e); }
+    }
+
+    document.getElementById('addMedForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const btn = document.getElementById('addMedBtn');
+      btn.disabled = true; btn.textContent = 'Adding...';
+      try {
+        const payload = { name: document.getElementById('medName').value.trim(), batch_no: document.getElementById('medBatch').value.trim(), quantity: Number(document.getElementById('medQty').value||0), expiry_date: document.getElementById('medExpiry').value || null };
+        await authFetch('/medicines', { method: 'POST', body: JSON.stringify(payload) });
+        await loadMeds();
+        document.getElementById('addMedForm').reset();
+      } catch(e){ alert('Add failed'); console.error(e); }
+      btn.disabled=false; btn.textContent='Add Medicine';
+    });
+
+    document.getElementById('issueForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const btn = document.getElementById('issueBtn');
+      btn.disabled=true; btn.textContent='Issuing...';
+      try {
+        const payload = { medicine_id: issueMedSelect.value, patient_id: issuePatientSelect.value, quantity: Number(document.getElementById('issueQty').value||1), instructions: document.getElementById('issueInst').value || null };
+        await authFetch('/medicine_issues', { method: 'POST', body: JSON.stringify(payload) });
+        await loadMeds(); await loadIssued();
+        document.getElementById('issueForm').reset();
+      } catch(e){ alert('Issue failed'); console.error(e); }
+      btn.disabled=false; btn.textContent='Issue';
+    });
+
+    document.body.addEventListener('click', async (ev) => {
+      const del = ev.target.closest('.delMed'); if(!del) return; if(!confirm('Delete medicine?')) return;
+      try { await authFetch('/medicines/' + del.dataset.id, { method: 'DELETE' }); await loadMeds(); } catch(e){ alert('Delete failed'); console.error(e); }
+    });
+
+    function escapeHtml(s){ if(!s && s!==0) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    document.getElementById('refreshMed').addEventListener('click', ()=>{ loadMeds(); loadPatientsSelect(); loadIssued(); });
+
+    showUser(); loadMeds(); loadPatientsSelect(); loadIssued();
+    function showUser(){ const a=document.getElementById('userArea'); const raw=localStorage.getItem('hms_user'); if(!raw){ a.innerHTML='<a class="btn btn-sm btn-outline-primary" href="login.html">Login</a>'; return;} const u=JSON.parse(raw); a.innerHTML=`<div class="d-flex align-items-center" style="gap:.5rem"><div class="user-avatar">${(u.name||u.email||'U').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}</div><div><div style="font-weight:600">${u.name||u.email}</div><div class="small-muted">Signed in</div></div></div>`; }
+  </script>
+</body>
+</html>
