@@ -7,31 +7,24 @@
   <link rel="stylesheet" href="assets/css/style.css" />
   <!-- add near top of each page (once) -->
 <script>
-  // config.js (global)
-  // Production backend URL (use your render backend URL). For local dev replace accordingly.
-  window.HMS = window.HMS || {};
-  // Use absolute backend URL in production:
-  window.HMS.API_BASE = window.HMS.API_BASE || 'https://hms-backend-yqjj.onrender.com/api';
-
-  // authFetch will be used by all pages to attach token & handle JSON
-  window.HMS.authFetch = async function(path, opts = {}) {
-    const base = window.HMS.API_BASE.replace(/\/$/,'');
-    const url = path.startsWith('http') ? path : `${base}/${path.replace(/^\/+/,'')}`;
-    const token = localStorage.getItem('hms_token');
-    const defaultHeaders = {'Content-Type':'application/json'};
-    opts.headers = Object.assign(defaultHeaders, opts.headers || {});
-    if (token) opts.headers['Authorization'] = 'Bearer ' + token;
-    const res = await fetch(url, opts);
-    const text = await res.text().catch(()=>null);
-    let body = null;
-    try { body = text ? JSON.parse(text) : null; } catch(e) { body = text; }
-    if (!res.ok) {
-      const err = new Error(body && (body.error || body.message) ? (body.error || body.message) : res.statusText);
-      err.status = res.status; err.body = body;
-      throw err;
+  // at top of dashboard.html
+  (function(){
+    const raw = localStorage.getItem('hms_user');
+    if (!raw) {
+      // not signed in -> show presence of dashboard but route user to login when they click dashboard actions
+      // if you want immediate redirect to login:
+      window.location.href = 'login.html';
+      return;
     }
-    return body;
-  };
+    try {
+      const u = JSON.parse(raw);
+      const role = (u.role||'').toLowerCase();
+      // If they somehow hit dashboard but are doctor/patient/admin, send to their dashboard
+      if (role.includes('doctor')) { window.location.href = 'doctors.html'; return; }
+      if (role.includes('patient')) { window.location.href = 'patients.html'; return; }
+      if (role.includes('admin')) { window.location.href = 'admin.html'; return; }
+    } catch(e){}
+  })();
 </script>
 
 </head>
