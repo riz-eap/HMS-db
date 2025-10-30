@@ -120,69 +120,73 @@
     }
 
     loginForm.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      loginMsg.innerHTML = '';
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      if (!email || !password) { showMessage('Email and password are required', 'error'); return; }
+  ev.preventDefault();
+  loginMsg.innerHTML = '';
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  if (!email || !password) { showMessage('Email and password are required', 'error'); return; }
 
-      // show loading state
-      const btn = document.getElementById('loginBtn');
-      btn.disabled = true;
-      btn.textContent = 'Signing in...';
+  // show loading state
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
 
-      try {
-        // POST to backend login
-        const resp = await postJson(API_BASE + '/auth/login', { email, password });
-        if (!resp.ok) {
-          // try to present helpful message
-          let errMsg = 'Login failed';
-          if (resp.body && resp.body.error) errMsg = resp.body.error;
-          else if (resp.status === 401) errMsg = 'Invalid credentials';
-          showMessage(errMsg, 'error');
-          btn.disabled = false; btn.textContent = 'Sign in';
-          return;
-        }
+  try {
+    // POST to backend login
+    const resp = await postJson(API_BASE + '/auth/login', { email, password });
+    if (!resp.ok) {
+      // try to present helpful message
+      let errMsg = 'Login failed';
+      if (resp.body && resp.body.error) errMsg = resp.body.error;
+      else if (resp.status === 401) errMsg = 'Invalid credentials';
+      showMessage(errMsg, 'error');
+      btn.disabled = false; btn.textContent = 'Sign in';
+      return;
+    }
 
-        // success — backend should return token and user
-        const data = resp.body;
-        // common shapes: { token, user } or { success:true, token, user }
-        const token = data.token || data.accessToken || (data.data && data.data.token);
-        const user = data.user || data.data?.user || data;
+    // success — backend should return token and user
+    const data = resp.body;
+    // common shapes: { token, user } or { success:true, token, user }
+    const token = data.token || data.accessToken || (data.data && data.data.token);
+    const user = data.user || data.data?.user || data;
 
-        if (!token || !user) {
-          showMessage('Unexpected response from server', 'error');
-          btn.disabled = false; btn.textContent = 'Sign in';
-          console.warn('Unexpected login response', data);
-          return;
-        }
+    if (!token || !user) {
+      showMessage('Unexpected response from server', 'error');
+      btn.disabled = false; btn.textContent = 'Sign in';
+      console.warn('Unexpected login response', data);
+      return;
+    }
 
-        // Store token & user
-        localStorage.setItem('hms_token', token);
-        localStorage.setItem('hms_user', JSON.stringify(user));
+    // Store token & user
+    localStorage.setItem('hms_token', token);
+    localStorage.setItem('hms_user', JSON.stringify(user));
 
-        showMessage('Signed in successfully');
-        // redirect by role
-        const role = (user.role || selectedRole || '').toLowerCase();
-        setTimeout(() => {
-          if (role.includes('doctor')) {
-            window.location.href = 'dashboard.html'; // doctor dashboard
-          } else if (role.includes('patient')) {
-            window.location.href = 'patients.html'; // patient area
-          } else if (role.includes('admin')) {
-            window.location.href = 'admin.html';
-          } else {
-            // fallback
-            window.location.href = 'dashboard.html';
-          }
-        }, 800);
+    showMessage('Signed in successfully');
 
-      } catch (err) {
-        console.error('Login error', err);
-        showMessage('Network error during login', 'error');
-        btn.disabled = false; btn.textContent = 'Sign in';
+    // redirect by role (DOCTORS -> doctors.html)
+    const role = (String(user.role || selectedRole || '')).toLowerCase();
+    setTimeout(() => {
+      if (role.includes('doctor')) {
+        window.location.href = 'doctors.html';
+      } else if (role.includes('patient')) {
+        window.location.href = 'patients.html';
+      } else if (role.includes('admin')) {
+        window.location.href = 'admin.html';
+      } else {
+        // fallback
+        window.location.href = 'dashboard.html';
       }
-    });
+    }, 600);
+
+  } catch (err) {
+    console.error('Login error', err);
+    showMessage('Network error during login', 'error');
+    // ensure button is re-enabled on failure
+    btn.disabled = false;
+    btn.textContent = 'Sign in';
+  }
+});
+
 
     // If user already logged in, send them to their dashboard immediately
     (function checkAlreadyLoggedIn(){
