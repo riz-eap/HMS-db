@@ -235,11 +235,38 @@
     function els(sel) { return Array.from(document.querySelectorAll(sel)); }
     function escapeHtml(s) { if (s === null || s === undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function formatDate(d) { if(!d) return ''; const x = new Date(d); return isNaN(x) ? '' : x.toLocaleString(); }
-    function showToast(msg, cls = 'info') {
-      const t = document.createElement('div'); t.className = 'toast align-items-center show'; t.style.position='fixed'; t.style.right='18px'; t.style.top=(18 + document.querySelectorAll('.toast').length*56)+'px'; t.style.zIndex=9999;
-      t.innerHTML = '<div class="d-flex"><div class="toast-body">'+escapeHtml(msg)+'</div><button class="btn-close me-2 m-auto" onclick="this.closest(\\'.toast\\').remove()"></button></div>';
-      document.body.appendChild(t); setTimeout(()=>t.remove(),3800);
-    }
+    // safe showToast (replace the old one)
+function showToast(msg, cls) {
+  try {
+    const t = document.createElement('div');
+    t.className = 'toast align-items-center show';
+    t.style.position = 'fixed';
+    t.style.right = '18px';
+    t.style.top = (18 + document.querySelectorAll('.toast').length * 56) + 'px';
+    t.style.zIndex = 9999;
+    // create inner structure without any escaped quotes
+    const inner = document.createElement('div');
+    inner.className = 'd-flex';
+    const body = document.createElement('div');
+    body.className = 'toast-body';
+    body.textContent = msg;
+    const btn = document.createElement('button');
+    btn.className = 'btn-close me-2 m-auto';
+    btn.type = 'button';
+    btn.addEventListener('click', function () { t.remove(); });
+    inner.appendChild(body);
+    inner.appendChild(btn);
+    t.appendChild(inner);
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3800);
+    return t;
+  } catch (e) {
+    // fallback: console and alert
+    console.error('toast error', e);
+    alert(msg);
+  }
+}
+
     function download(filename, text) {
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'text/csv'})); a.download = filename; document.body.appendChild(a); a.click(); a.remove();
     }
