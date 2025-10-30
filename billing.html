@@ -36,27 +36,67 @@
 
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg"><div class="container"><a class="navbar-brand" href="index.html">HMS</a></div></nav>
+  <nav class="navbar navbar-expand-lg">
+  <div class="container">
+    <a class="navbar-brand" href="index.html">HMS</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false">
+      <span class="navbar-toggler-icon"></span>
+    </button>
 
-  <main class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h4>Billing</h4>
-      <div><a class="btn btn-primary btn-sm" href="billing.html">Create Invoice</a></div>
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="login.html">Login</a></li>
+        <li class="nav-item"><a class="nav-link" href="register.html">Sign up</a></li>
+      </ul>
+
+      <div class="d-flex align-items-center ms-auto" id="navUserPill"></div>
     </div>
+  </div>
+</nav>
 
-    <div class="card">
-      <div class="card-body">
-        <p class="text-muted">This page will list invoices and payment status. You can integrate with your billing table (in DB) and fetch via <code>/api/billing</code>.</p>
-
-        <div class="table-responsive">
-          <table class="table table-hover">
-            <thead><tr><th>Invoice</th><th>Patient</th><th>Amount</th><th>Status</th><th>Due</th></tr></thead>
-            <tbody id="billingTbody"><tr><td colspan="5">No billing records yet</td></tr></tbody>
-          </table>
+<script>
+  // small script to populate user pill (add after config.js)
+  (function(){
+    const el = document.getElementById('navUserPill');
+    const raw = localStorage.getItem('hms_user');
+    if (!raw) {
+      el.innerHTML = '';
+      return;
+    }
+    try {
+      const u = JSON.parse(raw);
+      el.innerHTML = `
+        <div class="dropdown">
+          <a class="dropdown-toggle d-flex align-items-center text-decoration-none" id="userDrop" data-bs-toggle="dropdown" href="#">
+            <div style="width:36px;height:36px;border-radius:50%;background:#eef2ff;display:inline-flex;align-items:center;justify-content:center;margin-right:.6rem;font-weight:700;">${(u.name||u.email||'U').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()}</div>
+            <span style="font-weight:600">${u.name || u.email}</span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDrop">
+            <li><a class="dropdown-item" href="#" id="viewProfileLink">Edit profile</a></li>
+            <li><a class="dropdown-item" href="#" id="signOutLink">Sign out</a></li>
+          </ul>
         </div>
-      </div>
-    </div>
-  </main>
+      `;
+      document.getElementById('signOutLink').addEventListener('click', (e)=> {
+        e.preventDefault();
+        localStorage.removeItem('hms_token');
+        localStorage.removeItem('hms_user');
+        // redirect to index or login
+        window.location.href = 'index.html';
+      });
+      document.getElementById('viewProfileLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        // route based on role
+        const role = (u.role||'').toLowerCase();
+        if (role.includes('doctor')) window.location.href = 'doctors.html#edit';
+        else if (role.includes('patient')) window.location.href = 'patients.html#edit';
+        else if (role.includes('admin')) window.location.href = 'admin.html#edit';
+        else window.location.href = 'dashboard.html';
+      });
+    } catch(e){ el.innerHTML = ''; }
+  })();
+</script>
 
   <footer class="site-footer"><div class="container">© <span id="yearBilling"></span> HMS</div></footer>
 
