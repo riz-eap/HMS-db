@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>HMS — Admin Dashboard</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
+
+  <style>
+    /* Admin dashboard custom styles */
+    :root{
+      --accent:#3b82f6;
+      --muted:#6c757d;
+      --card-bg: #fff;
+      --glass: rgba(255,255,255,0.6);
+    }
+    body{background:#f1f5f9;font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial}
+    .sidebar{
+      min-width:240px;
+      max-width:260px;
+      background:linear-gradient(180deg,#fff,#f8fafc);
+      border-right:1px solid rgba(0,0,0,0.04);
+      height:100vh;
+      position:fixed;
+      top:0;left:0;padding:1.2rem;
+    }
+    .sidebar .brand{font-weight:700;color:var(--accent);font-size:1.15rem}
+    .sidebar .nav-link{color:#374151;border-radius:8px;padding:.55rem .75rem}
+    .sidebar .nav-link.active{background:linear-gradient(90deg,rgba(59,130,246,0.08),rgba(59,130,246,0.03));color:var(--accent)}
+    main.content{margin-left:270px;padding:1.6rem}
+    .topbar{
+      display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;
+    }
+    .stat-card{border-radius:12px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:0 6px 18px rgba(15,23,42,0.04);padding:1rem}
+    .table-card{border-radius:12px;background:var(--card-bg);box-shadow:0 6px 20px rgba(15,23,42,0.04);padding:0;overflow:hidden}
+    .table-card .card-body{padding:1rem}
+    .search-input{max-width:420px}
+    .small-muted{color:var(--muted);font-size:.9rem}
+    .badge-role-admin{background:#fce7f3;color:#9b1238}
+    .badge-role-doctor{background:#e6fffa;color:#0f766e}
+    .badge-role-patient{background:#fef3c7;color:#92400e}
+    /* responsive tweaks */
+    @media (max-width: 991px){
+      .sidebar{position:relative;height:auto;width:100%;display:flex;gap:.5rem;overflow-x:auto}
+      main.content{margin-left:0;padding:1rem}
+    }
+    /* modal wide */
+    .modal-wide{max-width:980px}
+    .table-responsive{max-height:520px;overflow:auto}
+    .action-btn{border-radius:8px}
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="mb-4">
+      <div class="brand d-flex align-items-center gap-2">
+        <i class="bi bi-hospital-fill fs-4" style="color:var(--accent)"></i>
+        <span>HMS Admin</span>
+      </div>
+      <div class="small-muted mt-1">Control panel • Manage system data</div>
+    </div>
+
+    <nav class="nav flex-column" aria-label="Main navigation">
+      <a class="nav-link active d-flex align-items-center gap-2" href="#overview"><i class="bi bi-speedometer2"></i> Overview</a>
+      <a class="nav-link d-flex align-items-center gap-2" href="#usersTab"><i class="bi bi-people-fill"></i> Users</a>
+      <a class="nav-link d-flex align-items-center gap-2" href="#doctorsTab"><i class="bi bi-person-badge-fill"></i> Doctors</a>
+      <a class="nav-link d-flex align-items-center gap-2" href="#patientsTab"><i class="bi bi-person-lines-fill"></i> Patients</a>
+      <a class="nav-link d-flex align-items-center gap-2" href="#appointmentsTab"><i class="bi bi-calendar-check-fill"></i> Appointments</a>
+      <hr/>
+      <a class="nav-link text-danger d-flex align-items-center gap-2" id="logoutBtnSide" href="#"><i class="bi bi-box-arrow-right"></i> Logout</a>
+    </nav>
+
+    <div class="mt-4 small text-muted">
+      <div>Environment: <strong id="envName">Production</strong></div>
+      <div class="mt-2">DB: <small id="dbStatus">Connecting...</small></div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="content">
+    <div class="topbar">
+      <div>
+        <h3 class="mb-0">Admin Dashboard</h3>
+        <div class="small-muted">Overview and management tools</div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <input id="globalSearch" class="form-control form-control-sm search-input" placeholder="Search users, patients, doctors..." />
+        <button id="refreshAll" class="btn btn-outline-secondary btn-sm">Refresh</button>
+        <div class="dropdown">
+          <button class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown">Actions</button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" id="exportAllCSV" href="#">Export All CSV</a></li>
+            <li><a class="dropdown-item" id="clearCache" href="#">Clear local cache</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-3">
+        <div class="stat-card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="small-muted">Total Users</div>
+              <div class="h4 mb-0" id="statUsers">—</div>
+            </div>
+            <i class="bi bi-people-fill fs-2 text-muted"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="small-muted">Doctors</div>
+              <div class="h4 mb-0" id="statDoctors">—</div>
+            </div>
+            <i class="bi bi-person-badge fs-2 text-muted"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="small-muted">Patients</div>
+              <div class="h4 mb-0" id="statPatients">—</div>
+            </div>
+            <i class="bi bi-person-lines-fill fs-2 text-muted"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="small-muted">Appointments</div>
+              <div class="h4 mb-0" id="statAppointments">—</div>
+            </div>
+            <i class="bi bi-calendar-check-fill fs-2 text-muted"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB CONTENT -->
+    <div class="card table-card mb-4">
+      <div class="card-body">
+        <ul class="nav nav-pills mb-3" id="adminTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="usersTab" data-bs-toggle="pill" data-bs-target="#usersPane" type="button">Users</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="doctorsTabBtn" data-bs-toggle="pill" data-bs-target="#doctorsPane" type="button">Doctors</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="patientsTabBtn" data-bs-toggle="pill" data-bs-target="#patientsPane" type="button">Patients</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="appointmentsTabBtn" data-bs-toggle="pill" data-bs-target="#appointmentsPane" type="button">Appointments</button>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <!-- USERS -->
+          <div class="tab-pane fade show active" id="usersPane">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="small-muted">Manage all registered users.</div>
+              <div class="d-flex gap-2">
+                <input id="usersFilter" class="form-control form-control-sm" placeholder="Filter by email or name"/>
+                <button id="usersExport" class="btn btn-sm btn-outline-secondary">Export CSV</button>
+                <button id="addUserBtn" class="btn btn-sm btn-primary">Add User</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover table-sm align-middle" id="usersTable">
+                <thead class="table-light">
+                  <tr>
+                    <th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Created</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- DOCTORS -->
+          <div class="tab-pane fade" id="doctorsPane">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="small-muted">Doctors directory and schedules.</div>
+              <div class="d-flex gap-2">
+                <input id="doctorsFilter" class="form-control form-control-sm" placeholder="Filter by name or specialty"/>
+                <button id="doctorsExport" class="btn btn-sm btn-outline-secondary">Export CSV</button>
+                <button id="addDoctorBtn" class="btn btn-sm btn-primary">Add Doctor</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover table-sm align-middle" id="doctorsTable">
+                <thead class="table-light">
+                  <tr><th>ID</th><th>Name</th><th>Specialty</th><th>Phone</th><th>Created</th><th>Actions</th></tr>
+                </thead><tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- PATIENTS -->
+          <div class="tab-pane fade" id="patientsPane">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="small-muted">Patient records and contact info.</div>
+              <div class="d-flex gap-2">
+                <input id="patientsFilter" class="form-control form-control-sm" placeholder="Filter by name or phone"/>
+                <button id="patientsExport" class="btn btn-sm btn-outline-secondary">Export CSV</button>
+                <button id="addPatientBtnMobile" class="btn btn-sm btn-primary">Add Patient</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover table-sm align-middle" id="patientsTable">
+                <thead class="table-light">
+                  <tr><th>ID</th><th>Name</th><th>Age</th><th>Phone</th><th>Created</th><th>Actions</th></tr>
+                </thead><tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- APPOINTMENTS -->
+          <div class="tab-pane fade" id="appointmentsPane">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="small-muted">Appointments schedule and status.</div>
+              <div class="d-flex gap-2">
+                <select id="apptStatusFilter" class="form-select form-select-sm">
+                  <option value="">All status</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+                <button id="apptsExport" class="btn btn-sm btn-outline-secondary">Export CSV</button>
+                <button id="addApptBtn" class="btn btn-sm btn-primary">Add Appointment</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover table-sm align-middle" id="appointmentsTable">
+                <thead class="table-light">
+                  <tr><th>ID</th><th>Patient</th><th>Doctor</th><th>Date / Time</th><th>Status</th><th>Actions</th></tr>
+                </thead><tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div><!-- card-body -->
+    </div><!-- card -->
+  </main>
+
+  <!-- MODALS (View/Edit common patterns) -->
+  <div class="modal fade" id="viewModal" tabindex="-1"><div class="modal-dialog modal-wide modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h5 id="viewModalTitle" class="modal-title">View</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="viewModalBody"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+  </div></div></div>
+
+  <div class="modal fade" id="editModal" tabindex="-1"><div class="modal-dialog modal-wide modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h5 id="editModalTitle" class="modal-title">Edit</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <form id="editForm"></form>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button id="saveEditBtn" class="btn btn-primary">Save</button></div>
+  </div></div></div>
+
+  <!-- Bootstrap JS bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Admin JS: functionality and API calls -->
+  <script>
+  (function(){
+    // ======= CONFIG ========
+    const API_BASE = "https://hms-backend-yqjj.onrender.com/api"; // <-- UPDATE if needed
+
+    // Local cache to avoid spamming backend during demo
+    const state = {
+      users: [], doctors: [], patients: [], appointments: [], env: {}
+    };
+
+    // ======= UTILS ========
+    function el(sel){return document.querySelector(sel)}
+    function els(sel){return Array.from(document.querySelectorAll(sel))}
+    function formatDate(dt){ if(!dt) return ''; const d=new Date(dt); return d.toLocaleString(); }
+    function csvFromArray(columns, rows){
+      const esc = v => `"${String(v===null||v===undefined? '' : v).replace(/"/g,'""')}"`;
+      return [columns.map(c=>esc(c)).join(',')].concat(rows.map(r=>columns.map(c=>esc(r[c])).join(','))).join('\\n');
+    }
+    function downloadText(filename, text){
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));
+      a.download=filename;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+    function showToast(msg, type='info'){ // tiny inline toast
+      const n=document.createElement('div'); n.className='toast align-items-center show'; n.style.position='fixed'; n.style.right='18px'; n.style.top=(18+(document.querySelectorAll('.toast').length*56))+'px'; n.style.zIndex=9999;
+      n.innerHTML='<div class="d-flex"><div class="toast-body">'+msg+'</div><button class="btn-close me-2 m-auto" onclick="this.closest(\\'.toast\\').remove()"></button></div>';
+      document.body.appendChild(n); setTimeout(()=>n.remove(),4000);
+    }
+
+    // ======= API wrapper (basic) ========
+    async function api(path, opts={}){
+      const url = API_BASE + path;
+      const headers = Object.assign({}, opts.headers || {}, {'Content-Type':'application/json'});
+      if(localStorage.getItem('hms_token')) headers.Authorization = 'Bearer '+localStorage.getItem('hms_token');
+      const r = await fetch(url, Object.assign({method:'GET', headers}, opts));
+      if(!r.ok){
+        const txt = await r.text().catch(()=>null);
+        throw new Error(txt || r.statusText || 'API error');
+      }
+      return r.status===204? null : r.json().catch(()=>null);
+    }
+
+    // ======= RENDER / TABLE HELPERS ========
+    function buildUsersTable(){
+      const tbody = el('#usersTable tbody'); tbody.innerHTML = '';
+      state.users.forEach(u=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML = `<td>${u.id||''}</td>
+          <td>${escapeHtml(u.name||'')}</td>
+          <td>${escapeHtml(u.email||'')}</td>
+          <td>${roleBadge(u.role)}</td>
+          <td>${formatDate(u.created_at||u.createdAt)}</td>
+          <td>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-outline-secondary action-btn" data-id="${u.id}" data-action="view">View</button>
+              <button class="btn btn-sm btn-outline-primary action-btn" data-id="${u.id}" data-action="edit">Edit</button>
+              <button class="btn btn-sm btn-outline-danger action-btn" data-id="${u.id}" data-action="delete">Delete</button>
+            </div>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    function buildDoctorsTable(){
+      const tbody = el('#doctorsTable tbody'); tbody.innerHTML='';
+      state.doctors.forEach(d=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML = `<td>${d.id||''}</td><td>${escapeHtml(d.name||'')}</td><td>${escapeHtml(d.specialty||'')}</td><td>${escapeHtml(d.phone||'')}</td><td>${formatDate(d.created_at||d.createdAt)}</td>
+        <td>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-outline-secondary action-btn" data-id="${d.id}" data-action="view-doctor">View</button>
+            <button class="btn btn-sm btn-outline-primary action-btn" data-id="${d.id}" data-action="edit-doctor">Edit</button>
+            <button class="btn btn-sm btn-outline-danger action-btn" data-id="${d.id}" data-action="delete-doctor">Delete</button>
+          </div>
+        </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    function buildPatientsTable(){
+      const tbody = el('#patientsTable tbody'); tbody.innerHTML='';
+      state.patients.forEach(p=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML = `<td>${p.id||''}</td><td>${escapeHtml(p.name||'')}</td><td>${p.age||''}</td><td>${escapeHtml(p.phone||'')}</td><td>${formatDate(p.created_at||p.createdAt)}</td>
+        <td>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-outline-secondary action-btn" data-id="${p.id}" data-action="view-patient">View</button>
+            <button class="btn btn-sm btn-outline-primary action-btn" data-id="${p.id}" data-action="edit-patient">Edit</button>
+            <button class="btn btn-sm btn-outline-danger action-btn" data-id="${p.id}" data-action="delete-patient">Delete</button>
+          </div>
+        </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    function buildAppointmentsTable(){
+      const tbody = el('#appointmentsTable tbody'); tbody.innerHTML='';
+      state.appointments.forEach(a=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML = `<td>${a.id||''}</td><td>${escapeHtml(a.patient_name||a.patient?.name||'')}</td><td>${escapeHtml(a.doctor_name||a.doctor?.name||'')}</td><td>${formatDate(a.datetime||a.date)}</td>
+        <td>${escapeHtml(a.status||'')}</td>
+        <td>
+          <div class="btn-group">
+            <button class="btn btn-sm btn-outline-secondary action-btn" data-id="${a.id}" data-action="view-appt">View</button>
+            <button class="btn btn-sm btn-outline-primary action-btn" data-id="${a.id}" data-action="edit-appt">Edit</button>
+            <button class="btn btn-sm btn-outline-danger action-btn" data-id="${a.id}" data-action="delete-appt">Delete</button>
+          </div>
+        </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function roleBadge(role){
+      if(!role) return '<span class="badge bg-secondary">—</span>';
+      if(role==='admin') return '<span class="badge badge-role-admin">Admin</span>';
+      if(role==='doctor') return '<span class="badge badge-role-doctor">Doctor</span>';
+      if(role==='patient') return '<span class="badge badge-role-patient">Patient</span>';
+      return `<span class="badge bg-light text-dark">${escapeHtml(role)}</span>`;
+    }
+
+    // ======= DATA LOADERS ========
+    async function loadStatsAndAll(){
+      try{
+        const [users, doctors, patients, appointments] = await Promise.all([
+          apiSafe('/users'), apiSafe('/doctors'), apiSafe('/patients'), apiSafe('/appointments')
+        ]);
+        state.users = users || [];
+        state.doctors = doctors || [];
+        state.patients = patients || [];
+        state.appointments = appointments || [];
+
+        // stats
+        el('#statUsers').textContent = state.users.length;
+        el('#statDoctors').textContent = state.doctors.length;
+        el('#statPatients').textContent = state.patients.length;
+        el('#statAppointments').textContent = state.appointments.length;
+
+        buildUsersTable(); buildDoctorsTable(); buildPatientsTable(); buildAppointmentsTable();
+        el('#dbStatus').textContent = 'Connected';
+      }catch(err){
+        console.error('Load failed', err);
+        el('#dbStatus').textContent = 'Error';
+        showToast('Could not load data: ' + err.message,'warning');
+        // fallback: seed sample rows to let UI be usable
+        if(!state.users.length) state.users=[{id:1,name:'Admin User',email:'admin@example.com',role:'admin',created_at:new Date().toISOString()}];
+        if(!state.patients.length) state.patients=[{id:1,name:'John Doe',age:34,phone:'9876543210',created_at:new Date().toISOString()}];
+        buildUsersTable(); buildPatientsTable();
+      }
+    }
+
+    // safe api: returns null on error but logs
+    async function apiSafe(path){
+      try{ return await api(path); } catch(e){ console.warn('API safe error', path, e); return null;}
+    }
+
+    // ======= ACTIONS: view/edit/delete handlers (local UI + API)
+    function attachActionHandlers(){
+      document.body.addEventListener('click', async (ev)=>{
+        const btn = ev.target.closest('button');
+        if(!btn) return;
+        const action = btn.dataset.action;
+        if(!action) return;
+        const id = btn.dataset.id;
+        // Users
+        if(action==='view'){ openView('User', state.users.find(u=>String(u.id)===String(id))); }
+        if(action==='edit'){ openEdit('User', state.users.find(u=>String(u.id)===String(id)), '/users'); }
+        if(action==='delete'){ if(confirm('Delete this user?')) { await deleteEntity('/users/'+id); await loadStatsAndAll(); }}
+        // Doctors
+        if(action==='view-doctor'){ openView('Doctor', state.doctors.find(d=>String(d.id)===String(id))); }
+        if(action==='edit-doctor'){ openEdit('Doctor', state.doctors.find(d=>String(d.id)===String(id)), '/doctors'); }
+        if(action==='delete-doctor'){ if(confirm('Delete this doctor?')) { await deleteEntity('/doctors/'+id); await loadStatsAndAll(); }}
+        // Patients
+        if(action==='view-patient'){ openView('Patient', state.patients.find(p=>String(p.id)===String(id))); }
+        if(action==='edit-patient'){ openEdit('Patient', state.patients.find(p=>String(p.id)===String(id)), '/patients'); }
+        if(action==='delete-patient'){ if(confirm('Delete this patient?')) { await deleteEntity('/patients/'+id); await loadStatsAndAll(); }}
+        // Appointments
+        if(action==='view-appt'){ openView('Appointment', state.appointments.find(a=>String(a.id)===String(id))); }
+        if(action==='edit-appt'){ openEdit('Appointment', state.appointments.find(a=>String(a.id)===String(id)), '/appointments'); }
+        if(action==='delete-appt'){ if(confirm('Delete this appointment?')) { await deleteEntity('/appointments/'+id); await loadStatsAndAll(); }}
+      });
+    }
+
+    function openView(title, obj){
+      el('#viewModalTitle').textContent = title + ' Details';
+      const body = el('#viewModalBody'); body.innerHTML = '';
+      if(!obj){ body.innerHTML = '<p class="text-muted">Item not found</p>'; new bootstrap.Modal(el('#viewModal')).show(); return; }
+      const ul = document.createElement('div');
+      ul.className='mb-2';
+      for(const k of Object.keys(obj)){
+        ul.innerHTML += `<div><strong>${escapeHtml(k)}:</strong> ${escapeHtml(String(obj[k]||''))}</div>`;
+      }
+      body.appendChild(ul);
+      new bootstrap.Modal(el('#viewModal')).show();
+    }
+
+    function openEdit(title, obj, apiPath){
+      el('#editModalTitle').textContent = 'Edit ' + title;
+      const form = el('#editForm'); form.innerHTML = '';
+      if(!obj){ form.innerHTML = '<div class="text-muted">Item not found</div>'; new bootstrap.Modal(el('#editModal')).show(); return; }
+
+      // create inputs for editable keys
+      for(const k of Object.keys(obj)){
+        if(k==='id' || k==='created_at' || k==='createdAt') continue;
+        const val = obj[k]===null||obj[k]===undefined? '' : obj[k];
+        const div=document.createElement('div'); div.className='mb-2';
+        div.innerHTML = `<label class="form-label small">${escapeHtml(k)}</label>
+          <input class="form-control" name="${escapeHtml(k)}" value="${escapeHtml(val)}" />`;
+        form.appendChild(div);
+      }
+      // save handler
+      const saveBtn = el('#saveEditBtn');
+      saveBtn.onclick = async ()=>{
+        const fd = new FormData(form);
+        const payload = {};
+        for(const [k,v] of fd.entries()) payload[k]=v;
+        try{
+          await api(apiPath + '/' + obj.id, { method:'PUT', body:payload });
+          showToast('Saved','success'); new bootstrap.Modal(el('#editModal')).hide(); await loadStatsAndAll();
+        }catch(e){ showToast('Save failed: '+e.message,'warning'); console.error(e); }
+      };
+      new bootstrap.Modal(el('#editModal')).show();
+    }
+
+    async function deleteEntity(path){
+      try{ await api(path, {method:'DELETE'}); showToast('Deleted','success'); }
+      catch(e){ showToast('Delete failed: '+e.message,'warning'); console.error(e); }
+    }
+
+    // ======= ADD / EXPORT HANDLERS ========
+    function attachUIHandlers(){
+      el('#refreshAll').addEventListener('click', ()=>loadStatsAndAll());
+      el('#exportAllCSV').addEventListener('click', exportAllCSV);
+      el('#usersExport').addEventListener('click', ()=>exportCSV('users'));
+      el('#doctorsExport').addEventListener('click', ()=>exportCSV('doctors'));
+      el('#patientsExport').addEventListener('click', ()=>exportCSV('patients'));
+      el('#apptsExport').addEventListener('click', ()=>exportCSV('appointments'));
+
+      el('#addUserBtn').addEventListener('click', ()=>openCreateModal('User','/users'));
+      el('#addDoctorBtn').addEventListener('click', ()=>openCreateModal('Doctor','/doctors'));
+      el('#addPatientBtnMobile').addEventListener('click', ()=>openCreateModal('Patient','/patients'));
+      el('#addApptBtn').addEventListener('click', ()=>openCreateModal('Appointment','/appointments'));
+
+      el('#usersFilter').addEventListener('input', (e)=>filterTable('users', e.target.value));
+      el('#doctorsFilter').addEventListener('input', (e)=>filterTable('doctors', e.target.value));
+      el('#patientsFilter').addEventListener('input', (e)=>filterTable('patients', e.target.value));
+      el('#apptStatusFilter').addEventListener('change', (e)=>filterTable('appointments', e.target.value));
+      el('#globalSearch').addEventListener('input', (e)=>globalSearch(e.target.value));
+
+      // logout
+      el('#logoutBtnSide').addEventListener('click', ()=>{
+        localStorage.removeItem('hms_token'); localStorage.removeItem('hms_user'); location.href='index.html';
+      });
+    }
+
+    function openCreateModal(title, apiPath){
+      el('#editModalTitle').textContent = 'Create ' + title;
+      const form = el('#editForm'); form.innerHTML = '';
+      // create generic inputs for typical fields (name,email,phone,role,age,specialty,date)
+      const fields = ['name','email','phone','role','age','specialty','address','date','datetime','status'];
+      fields.forEach(f=>{
+        const div=document.createElement('div'); div.className='mb-2';
+        div.innerHTML = `<label class="form-label small">${f}</label><input name="${f}" class="form-control"/>`;
+        form.appendChild(div);
+      });
+      el('#saveEditBtn').onclick = async ()=>{
+        const fd=new FormData(form); const payload={}; for(const [k,v] of fd.entries()) if(v) payload[k]=v;
+        try{ await api(apiPath, {method:'POST', body:payload}); showToast('Created','success'); new bootstrap.Modal(el('#editModal')).hide(); await loadStatsAndAll(); }
+        catch(e){ showToast('Create failed: '+e.message,'warning'); console.error(e); }
+      };
+      new bootstrap.Modal(el('#editModal')).show();
+    }
+
+    function exportCSV(kind){
+      const data = state[kind] || [];
+      if(!data.length) return showToast('No records to export','info');
+      const cols = Object.keys(data[0]);
+      downloadText(`${kind}.csv`, csvFromArray(cols, data));
+    }
+    function exportAllCSV(){
+      ['users','doctors','patients','appointments'].forEach(k=>exportCSV(k));
+    }
+
+    // ======= FILTERS ========
+    function filterTable(kind, term){
+      term = String(term||'').toLowerCase().trim();
+      if(!term){ buildFor(kind); return; }
+      const list = (state[kind]||[]).filter(item=>{
+        return Object.values(item||{}).some(v=>String(v||'').toLowerCase().includes(term));
+      });
+      renderFiltered(kind, list);
+    }
+    function renderFiltered(kind, list){
+      if(kind==='users'){ state.usersFiltered = list; const tbody=el('#usersTable tbody'); tbody.innerHTML=''; list.forEach(u=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${u.id}</td><td>${escapeHtml(u.name)}</td><td>${escapeHtml(u.email)}</td><td>${roleBadge(u.role)}</td><td>${formatDate(u.created_at||u.createdAt)}</td><td><div class="btn-group"><button class="btn btn-sm btn-outline-secondary" data-id="${u.id}" data-action="view">View</button></div></td>`; tbody.appendChild(tr); }); return;}
+      if(kind==='doctors'){ const tbody=el('#doctorsTable tbody'); tbody.innerHTML=''; list.forEach(d=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${d.id}</td><td>${escapeHtml(d.name)}</td><td>${escapeHtml(d.specialty)}</td><td>${escapeHtml(d.phone)}</td><td>${formatDate(d.created_at||d.createdAt)}</td><td>—</td>`; tbody.appendChild(tr); }); return;}
+      if(kind==='patients'){ const tbody=el('#patientsTable tbody'); tbody.innerHTML=''; list.forEach(p=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${p.id}</td><td>${escapeHtml(p.name)}</td><td>${p.age||''}</td><td>${escapeHtml(p.phone)}</td><td>${formatDate(p.created_at||p.createdAt)}</td><td>—</td>`; tbody.appendChild(tr); }); return;}
+      if(kind==='appointments'){ const tbody=el('#appointmentsTable tbody'); tbody.innerHTML=''; list.forEach(a=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${a.id}</td><td>${escapeHtml(a.patient_name||a.patient?.name||'')}</td><td>${escapeHtml(a.doctor_name||a.doctor?.name||'')}</td><td>${formatDate(a.datetime||a.date)}</td><td>${escapeHtml(a.status||'')}</td><td>—</td>`; tbody.appendChild(tr); }); return;}
+    }
+
+    function buildFor(kind){
+      if(kind==='users') buildUsersTable();
+      if(kind==='doctors') buildDoctorsTable();
+      if(kind==='patients') buildPatientsTable();
+      if(kind==='appointments') buildAppointmentsTable();
+    }
+
+    function globalSearch(term){
+      term = String(term||'').toLowerCase().trim();
+      if(!term) { loadStatsAndAll(); return; }
+      // simple search across all collections
+      const users = state.users.filter(u => JSON.stringify(u).toLowerCase().includes(term));
+      const doctors = state.doctors.filter(d => JSON.stringify(d).toLowerCase().includes(term));
+      const patients = state.patients.filter(p => JSON.stringify(p).toLowerCase().includes(term));
+      const appointments = state.appointments.filter(a => JSON.stringify(a).toLowerCase().includes(term));
+      renderFiltered('users', users);
+      renderFiltered('doctors', doctors);
+      renderFiltered('patients', patients);
+      renderFiltered('appointments', appointments);
+    }
+
+    // ======= BOOT ========
+    function escapeHtml(s){ if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function init(){ attachUIHandlers(); attachActionHandlers(); loadStatsAndAll(); }
+    init();
+
+  })();
+  </script>
+</body>
+</html>
