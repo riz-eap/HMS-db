@@ -13,6 +13,10 @@
 
   <style>
     .hero-illustration { max-width:520px; margin:auto; }
+    /* small responsive tweak */
+    @media (max-width: 992px) {
+      .hero-illustration { display:block; margin-top:1.25rem; max-width:420px; }
+    }
   </style>
   <!-- add near top of each page (once) -->
 <script>
@@ -146,7 +150,18 @@
 
       <div class="col-lg-6 text-center d-none d-lg-block">
         <div class="hero-illustration">
-          <img alt="Hospital illustration" src="assets/images/hospital-illu.svg" style="width:100%;height:auto;"/>
+          <!-- responsive picture element: webp (if you provide), jpg fallback, svg fallback -->
+          <picture>
+            <!-- optional modern format (provide .webp if you create it) -->
+            <source srcset="assets/images/hospital-photo.webp" type="image/webp">
+            <!-- primary photo (place this in your repo) -->
+            <img
+              alt="Hospital reception and staff"
+              src="assets/images/hospital-photo.jpg"
+              loading="lazy"
+              style="width:100%;height:auto;border-radius:8px;box-shadow:0 12px 30px rgba(2,6,23,0.08);"
+            />
+          </picture>
         </div>
       </div>
     </div>
